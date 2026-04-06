@@ -6,4 +6,4 @@
 #SBATCH --mail-user=deus.thindwa@yale.edu
 #SBATCH -o fit1.out
 
-Rscript script/08_lhs_modelrun.R
+Rscript script/carriage/08_lhs_modelrun.R

@@ -178,6 +178,9 @@ start_time = 1
 tmax =  nrow(birth_EW)
 my_times <- seq(start_time, tmax, by = 1)
 
+
+#CHECK PREVALENCE SIMULATIONS BEFORE ANY MODEL FIT
+
 # #using the ODE function to get simulated transmission dynamic results
 # results <- ode(y = yinit.vector,
 #                t = my_times,
