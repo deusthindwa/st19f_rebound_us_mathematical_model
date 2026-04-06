@@ -5,22 +5,22 @@
 #====================================================================
 
 #load R packages
-source(here::here("script", "00_main.R"))
+source(here::here("script", "IPD", "00_main.R"))
 
 #load data to fit model to
-source(here::here("script", "01_preprocessData.R"))
+source(here::here("script", "IPD", "01_preprocessData.R"))
 
 #set up model including births, contacts, population
-source(here::here("script", "02_setUp.R"))
+source(here::here("script", "IPD", "02_setUp.R"))
 
 #set up fixed parameter values
-source(here::here("script", "03_modelParKnown.R"))
+source(here::here("script", "IPD", "03_modelParKnown.R"))
 
 #run model function
-source(here::here("script", "04_transModel.R"))
+source(here::here("script", "IPD", "04_transModel.R"))
 
 #call latin hypercube samples
-source(here::here("script", "05_lhs_paraspace.R"))
+source(here::here("script", "IPD", "05_lhs_paraspace.R"))
 
 # Create a list to hold parameter estimates
 saved_ipd_dynamics <- list()
@@ -46,7 +46,7 @@ for( nn in 1:len_each_run){
   my_parmset <- c(parms, parmAdded)
   
   #run model function with varied parameter values calling
-  source(here::here("script", "06_lhs_model.R"))
+  source(here::here("script", "IPD", "06_lhs_model.R"))
   
   #save each run seperately
   saved_ipd_dynamics[[nn]] <-  as_data_frame(fitmodel()) %>% dplyr::mutate(run=nn)
@@ -54,5 +54,4 @@ for( nn in 1:len_each_run){
 }
 
 #save all the runs together
-rio::export(saved_ipd_dynamics, here::here("results", "saved_ipd_dynamics.rds"))
-
+rio::export(saved_ipd_dynamics, here::here("results", "IPD", "saved_ipd_dynamics.rds"))

@@ -36,7 +36,7 @@ lhs.sample.mt[,11] <- qunif(uniform_LHS[,11], min = 60, max = 100) #scale replac
 total_run <- 1
 len_each_run <- N_sample_size/total_run
 
-rio::export(lhs.sample.mt, file = here("results", "lhs_parset.csv"))
+rio::export(lhs.sample.mt, file = here("results", "IPD", "lhs_parset.csv"))
 
 #turn off the task call to reset seed
 removeTaskCallback(1)

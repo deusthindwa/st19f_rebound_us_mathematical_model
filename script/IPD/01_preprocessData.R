@@ -6,7 +6,7 @@
 
 #pcv7 annual cases
 ipd7 <-
-  rio::import(here::here("data", "usa_ipd.csv")) %>%
+  rio::import(here::here("data", "IPD", "usa_ipd.csv")) %>%
   dplyr::filter(st != "MISS", yearc <2010) %>%
   dplyr::mutate(agegp = if_else(agegp == 'Age <2', '0-1y', if_else(agegp == 'Age 2-4', '2-4y', if_else(agegp == 'Age 5-17', '5-17y', '18+y'))),
                 yearc = as.integer(yearc),
@@ -24,7 +24,7 @@ ipd7 <-
 
 #pcv13 annual cases
 ipd13 <-
-  rio::import(here::here("data", "usa_ipd.csv")) %>%
+  rio::import(here::here("data", "IPD", "usa_ipd.csv")) %>%
   dplyr::filter(st != "MISS", yearc >=2010, yearc <= 2019) %>%
   dplyr::mutate(agegp = if_else(agegp == 'Age <2', '0-1y', if_else(agegp == 'Age 2-4', '2-4y', if_else(agegp == 'Age 5-17', '5-17y', '18+y'))),
                 yearc = as.integer(yearc),
@@ -130,7 +130,7 @@ ts_obs <-
   theme(strip.text.x = element_text(size = 18), strip.background = element_rect(fill = "gray90")) +
   theme(legend.position = 'none')
 
-ggsave(here::here("output", "timeseries_obs.png"),
+ggsave(here::here("output", "IPD", "timeseries_obs.png"),
        plot = ts_obs,
        width = 22, height = 9, unit = "in", dpi = 300)
 

@@ -4,25 +4,12 @@
 
 #====================================================================
 
-# #plot the model structure
-# modelstru <-
-#   ggplot() +
-#   annotation_custom(rasterGrob(readPNG(here::here("data","fig1.png")), interpolate=TRUE), xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf) +
-#   theme_bw(base_size = 14, base_family = "American Typewriter") +
-#   facet_grid(. ~ "Model structure") +
-#   labs(title = "(a)", x = "", y = "") +
-#   theme(axis.text.x = element_text(size = 12), axis.text.y = element_text(size = 12)) +
-#   theme(strip.text.x = element_text(size = 18), strip.background = element_rect(fill = "gray90")) +
-#   theme(panel.border = element_rect(colour = "black", fill = NA, size = 1))
-
-#====================================================================
-
 #load observed carriage data
-source(here::here("script", "01_preprocessData.R"))
+source(here::here("script", "IPD", "01_preprocessData.R"))
 obs_traj <- ipdAfit7 %>% slice_head(., n=12)
 
 #extract parameters
-parset <- rio::import(here::here("results", "lhs_parset.csv"))
+parset <- rio::import(here::here("results", "IPD", "lhs_parset.csv"))
 delta1 <- parset$V1
 delta2 <- parset$V2
 omega1 <- parset$V3
@@ -35,7 +22,7 @@ rep4 <- parset$V11
 
 #load model simulated data
 #pred_traj <- Filter(function(x) !is.null(x) && length(x) > 0, pred_traj)
-pred_traj <- readRDS(here::here("results", "saved_ipd_dynamics.rds"))
+pred_traj <- readRDS(here::here("results", "IPD", "saved_ipd_dynamics.rds"))
 
 #likelihood under poisson distribution
 GOF_cases <- c()
@@ -125,7 +112,7 @@ posteriorPlot <-
   theme(strip.text.x = element_text(size = 18), strip.background = element_rect(fill = "gray90")) +
   theme(legend.position = 'none')
 
-rio::export(posteriorEst, file = here("output", "baseModel_estimates.csv"))
+rio::export(posteriorEst, file = here("output", "IPD", "baseModel_estimates.csv"))
 
 #find the simulations corresponding to resamples
 posterior_traj <- list()
@@ -203,6 +190,6 @@ post_trajPlot <-
 
 post_trajPlot
 
-ggsave(here::here("output", "baseModel_obsfit.png"),
+ggsave(here::here("output", "IPD", "baseModel_obsfit.png"),
        plot = post_trajPlot,
        width = 18, height = 10, unit = "in", dpi = 300)

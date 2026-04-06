@@ -6,4 +6,4 @@
 #SBATCH --mail-user=deus.thindwa@yale.edu
 #SBATCH -o fit1.out
 
-Rscript script/12_lhsParrun.R
+Rscript script/IPD/07_lhsParrun.R

@@ -5,7 +5,7 @@
 #====================================================================
 
 #import observed ipd data
-source(here::here("script", "scenarios", "01_preprocessData_scenario.R"))
+source(here::here("script", "IPD", "scenarios", "01_preprocessData_scenario.R"))
 obs_traj <- ipdAfit_all %>% slice_head(., n = 21)
 obs_trajA <- ipdAfit_all_A %>% slice_head(., n = 21)
 
@@ -15,34 +15,34 @@ scenario = vcase
 
 #import LHS parameter set data
 if (scenario == 1){
-  parset <- rio::import(here::here("results", "lhs_parset_projection.csv"))
+  parset <- rio::import(here::here("results", "IPD", "lhs_parset_projection.csv"))
   
 } else if (scenario == 2){
-  parset <- rio::import(here::here("results", "lhs_parset_project_efficacy.csv"))
+  parset <- rio::import(here::here("results", "IPD", "lhs_parset_project_efficacy.csv"))
   
 } else if (scenario == 3){
-  parset <- rio::import(here::here("results", "lhs_parset_project_duration.csv"))
+  parset <- rio::import(here::here("results", "IPD", "lhs_parset_project_duration.csv"))
   
 } else if (scenario == 4){
-  parset <- rio::import(here::here("results", "lhs_parset_project_competition.csv"))
+  parset <- rio::import(here::here("results", "IPD", "lhs_parset_project_competition.csv"))
   
 } else if (scenario == 5){
-  parset <- rio::import(here::here("results", "lhs_parset_modefit_efficacy.csv"))
+  parset <- rio::import(here::here("results", "IPD", "lhs_parset_modefit_efficacy.csv"))
   
 } else if (scenario == 6){
-  parset <- rio::import(here::here("results", "lhs_parset_modefit_duration.csv"))
+  parset <- rio::import(here::here("results", "IPD", "lhs_parset_modefit_duration.csv"))
   
 } else if (scenario == 7){
-  parset <- rio::import(here::here("results", "lhs_parset_modefit_competition.csv"))
+  parset <- rio::import(here::here("results", "IPD", "lhs_parset_modefit_competition.csv"))
   
 } else if (scenario == 8){
-  parset <- rio::import(here::here("results", "lhs_parset_project_efficacy_reduced.csv"))
+  parset <- rio::import(here::here("results", "IPD", "lhs_parset_project_efficacy_reduced.csv"))
   
 } else if (scenario == 9){
-  parset <- rio::import(here::here("results", "lhs_parset_project_efficacy_constant.csv"))
+  parset <- rio::import(here::here("results", "IPD", "lhs_parset_project_efficacy_constant.csv"))
   
 } else if (scenario == 10){
-  parset <- rio::import(here::here("results", "lhs_parset_project_pcv7serotypes.csv"))
+  parset <- rio::import(here::here("results", "IPD", "lhs_parset_project_pcv7serotypes.csv"))
   
 } else{
   print("No parameter set available")
@@ -66,34 +66,34 @@ prior_compNy  = parset$V14
 
 #import model predictions data
 if (scenario == 1){
-  pred_traj <- base::readRDS(here::here("results", "saved_ipdRun_projection.rds"))
+  pred_traj <- base::readRDS(here::here("results", "IPD", "saved_ipdRun_projection.rds"))
   
 } else if (scenario == 2){
-  pred_traj <- base::readRDS(here::here("results", "saved_ipdRun_project_efficacy.rds"))
+  pred_traj <- base::readRDS(here::here("results", "IPD", "saved_ipdRun_project_efficacy.rds"))
   
 } else if (scenario == 3){
-  pred_traj <- base::readRDS(here::here("results", "saved_ipdRun_project_duration..rds"))
+  pred_traj <- base::readRDS(here::here("results", "IPD", "saved_ipdRun_project_duration..rds"))
   
 } else if (scenario == 4){
-  pred_traj <- base::readRDS(here::here("results", "saved_ipdRun_project_competition.rds"))
+  pred_traj <- base::readRDS(here::here("results", "IPD", "saved_ipdRun_project_competition.rds"))
   
 } else if (scenario == 5){
-  pred_traj <- base::readRDS(here::here("results", "saved_ipdRun_modefit_efficacy.rds"))
+  pred_traj <- base::readRDS(here::here("results", "IPD", "saved_ipdRun_modefit_efficacy.rds"))
   
 } else if (scenario == 6){
-  pred_traj <- base::readRDS(here::here("results", "saved_ipdRun_modefit_duration.rds"))
+  pred_traj <- base::readRDS(here::here("results", "IPD", "saved_ipdRun_modefit_duration.rds"))
   
 } else if (scenario == 7){
-  pred_traj <- base::readRDS(here::here("results", "saved_ipdRun_modefit_competition.rds"))
+  pred_traj <- base::readRDS(here::here("results", "IPD", "saved_ipdRun_modefit_competition.rds"))
   
 } else if (scenario == 8){
-  pred_traj <- base::readRDS(here::here("results", "saved_ipdRun_project_efficacy_reduced.rds"))
+  pred_traj <- base::readRDS(here::here("results", "IPD", "saved_ipdRun_project_efficacy_reduced.rds"))
   
 } else if (scenario == 9){
-  pred_traj <- base::readRDS(here::here("results", "saved_ipdRun_project_efficacy_constant.rds"))
+  pred_traj <- base::readRDS(here::here("results", "IPD", "saved_ipdRun_project_efficacy_constant.rds"))
   
 } else if (scenario == 10){
-  pred_traj <- base::readRDS(here::here("results", "saved_ipdRun_project_pcv7serotypes.rds"))
+  pred_traj <- base::readRDS(here::here("results", "IPD", "saved_ipdRun_project_pcv7serotypes.rds"))
   
 } else{
   print("No ipdRun to import")
@@ -137,13 +137,13 @@ XX <-
 
 #logLikelihood for scenarios of model fit to the data
 if (scenario == 5) { #model fit of reduced efficacy
-  rio::export(data_frame(data.frame(XX$GOF_cases)), here::here("results", "logLik_efficacy.csv"))
+  rio::export(data_frame(data.frame(XX$GOF_cases)), here::here("results", "IPD", "logLik_efficacy.csv"))
   
 } else if (scenario == 6){
-  rio::export(data_frame(data.frame(XX$GOF_cases)), here::here("results", "logLik_duration.csv"))
+  rio::export(data_frame(data.frame(XX$GOF_cases)), here::here("results", "IPD", "logLik_duration.csv"))
   
 } else if (scenario == 7){
-  rio::export(data_frame(data.frame(XX$GOF_cases)), here::here("results", "logLik_competition.csv"))
+  rio::export(data_frame(data.frame(XX$GOF_cases)), here::here("results", "IPD", "logLik_competition.csv"))
   
 } else{
   print('No logLik dataset')
@@ -197,34 +197,34 @@ posteriorEst <-
                    na.rm = TRUE)
 
 if (scenario == 1){
-  rio::export(posteriorEst, file = here("output", "estimates_projection.csv"))
+  rio::export(posteriorEst, file = here("output", "IPD", "estimates_projection.csv"))
   
 } else if (scenario == 2){
-  rio::export(posteriorEst, file = here("output", "estimates_project_efficacy.csv"))
+  rio::export(posteriorEst, file = here("output", "IPD", "estimates_project_efficacy.csv"))
   
 } else if (scenario == 3){
-  rio::export(posteriorEst, file = here("output", "estimates_project_duration.csv"))
+  rio::export(posteriorEst, file = here("output", "IPD", "estimates_project_duration.csv"))
   
 } else if (scenario == 4){
-  rio::export(posteriorEst, file = here("output", "estimates_project_competition.csv"))
+  rio::export(posteriorEst, file = here("output", "IPD", "estimates_project_competition.csv"))
   
 } else if (scenario == 5){
-  rio::export(posteriorEst, file = here("output", "estimates_modefit_efficacy.csv"))
+  rio::export(posteriorEst, file = here("output", "IPD", "estimates_modefit_efficacy.csv"))
   
 } else if (scenario == 6){
-  rio::export(posteriorEst, file = here("output", "estimates_modefit_duration.csv"))
+  rio::export(posteriorEst, file = here("output", "IPD", "estimates_modefit_duration.csv"))
   
 } else if (scenario == 7){
-  rio::export(posteriorEst, file = here("output", "estimates_modefit_competition.csv"))
+  rio::export(posteriorEst, file = here("output", "IPD", "estimates_modefit_competition.csv"))
   
 } else if (scenario == 8){
-  rio::export(posteriorEst, file = here("output", "estimates_modefit_efficacy_reduced.csv"))
+  rio::export(posteriorEst, file = here("output", "IPD", "estimates_modefit_efficacy_reduced.csv"))
   
 } else if (scenario == 9){
-  rio::export(posteriorEst, file = here("output", "estimates_modefit_efficacy_constant.csv"))
+  rio::export(posteriorEst, file = here("output", "IPD", "estimates_modefit_efficacy_constant.csv"))
   
 } else if (scenario == 10){
-  rio::export(posteriorEst, file = here("output", "estimates_modefit_pcv7serotypes.csv"))
+  rio::export(posteriorEst, file = here("output", "IPD", "estimates_modefit_pcv7serotypes.csv"))
   
 } else{
   print("No ipdRun to import")
@@ -327,34 +327,34 @@ post_trajPlot
 
 #save all plots
 if (scenario == 1){
-  ggsave(here::here("output", "projections.png"), plot = post_trajPlot, width = 20, height = 10, unit = "in", dpi = 300)
+  ggsave(here::here("output", "IPD", "projections.png"), plot = post_trajPlot, width = 20, height = 10, unit = "in", dpi = 300)
   
 } else if (scenario == 2){
-  ggsave(here::here("output", "project_efficacy.png"), plot = post_trajPlot, width = 20, height = 10, unit = "in", dpi = 300)
+  ggsave(here::here("output", "IPD", "project_efficacy.png"), plot = post_trajPlot, width = 20, height = 10, unit = "in", dpi = 300)
   
 } else if (scenario == 3){
-  ggsave(here::here("output", "project_duration.png"), plot = post_trajPlot, width = 20, height = 10, unit = "in", dpi = 300)
+  ggsave(here::here("output", "IPD", "project_duration.png"), plot = post_trajPlot, width = 20, height = 10, unit = "in", dpi = 300)
   
 } else if (scenario == 4){
-  ggsave(here::here("output", "project_competition.png"), plot = post_trajPlot, width = 20, height = 10, unit = "in", dpi = 300)
+  ggsave(here::here("output", "IPD", "project_competition.png"), plot = post_trajPlot, width = 20, height = 10, unit = "in", dpi = 300)
   
 } else if (scenario == 5){
-  ggsave(here::here("output", "modefit_efficacy.png"), plot = post_trajPlot, width = 20, height = 10, unit = "in", dpi = 300)
+  ggsave(here::here("output", "IPD", "modefit_efficacy.png"), plot = post_trajPlot, width = 20, height = 10, unit = "in", dpi = 300)
   
 } else if (scenario == 6){
-  ggsave(here::here("output", "modefit_duration.png"), plot = post_trajPlot, width = 20, height = 10, unit = "in", dpi = 300)
+  ggsave(here::here("output", "IPD", "modefit_duration.png"), plot = post_trajPlot, width = 20, height = 10, unit = "in", dpi = 300)
   
 } else if (scenario == 7){
-  ggsave(here::here("output", "modefit_competition.png"), plot = post_trajPlot, width = 20, height = 10, unit = "in", dpi = 300)
+  ggsave(here::here("output", "IPD", "modefit_competition.png"), plot = post_trajPlot, width = 20, height = 10, unit = "in", dpi = 300)
   
 } else if (scenario == 8){
-  ggsave(here::here("output", "project_efficacy_reduced.png"), plot = post_trajPlot, width = 20, height = 10, unit = "in", dpi = 300)
+  ggsave(here::here("output", "IPD", "project_efficacy_reduced.png"), plot = post_trajPlot, width = 20, height = 10, unit = "in", dpi = 300)
   
 } else if (scenario == 9){
-  ggsave(here::here("output", "project_efficacy_constant.png"), plot = post_trajPlot, width = 20, height = 10, unit = "in", dpi = 300)
+  ggsave(here::here("output", "IPD", "project_efficacy_constant.png"), plot = post_trajPlot, width = 20, height = 10, unit = "in", dpi = 300)
   
 } else if (scenario == 10){
-  ggsave(here::here("output", "project_efficacy_pcv7serotypes.png"), plot = post_trajPlotA, width = 20, height = 10, unit = "in", dpi = 300)
+  ggsave(here::here("output", "IPD", "project_efficacy_pcv7serotypes.png"), plot = post_trajPlotA, width = 20, height = 10, unit = "in", dpi = 300)
   
 }
 
@@ -369,9 +369,9 @@ else{
 
 Model_logLik <-
   dplyr::bind_cols(
-    logLik_efficacy <- rio::import(here::here('results','logLik_efficacy.csv')) %>% dplyr::rename('ll_efficacy' = 'XX.GOF_cases'),
-    logLik_duration <- rio::import(here::here('results','logLik_duration.csv'))  %>% dplyr::rename('ll_duration' = 'XX.GOF_cases'),
-    logLik_competition <- rio::import(here::here('results','logLik_competition.csv'))  %>% dplyr::rename('ll_competition' = 'XX.GOF_cases')) %>%
+    logLik_efficacy <- rio::import(here::here('results', "IPD", 'logLik_efficacy.csv')) %>% dplyr::rename('ll_efficacy' = 'XX.GOF_cases'),
+    logLik_duration <- rio::import(here::here('results', "IPD", 'logLik_duration.csv'))  %>% dplyr::rename('ll_duration' = 'XX.GOF_cases'),
+    logLik_competition <- rio::import(here::here('results', "IPD", 'logLik_competition.csv'))  %>% dplyr::rename('ll_competition' = 'XX.GOF_cases')) %>%
   dplyr::summarise(ll_eff = mean(ll_efficacy),
                 ll_dur = mean(ll_duration),
                 ll_com = mean(ll_competition))

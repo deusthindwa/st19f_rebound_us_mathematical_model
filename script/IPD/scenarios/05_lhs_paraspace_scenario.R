@@ -55,7 +55,7 @@ lhs.sample.mt[,22] <- qunif(uniform_LHS[,22], min = 20, max = 20) #scale replace
 total_run <- 1
 len_each_run <- N_sample_size/total_run
 
-rio::export(lhs.sample.mt, file = here("results", "lhs_parset_projection.csv"))
+rio::export(lhs.sample.mt, file = here("results", "IPD", "lhs_parset_projection.csv"))
 
 #turn off the task call to reset seed
 removeTaskCallback(1)
@@ -105,7 +105,7 @@ removeTaskCallback(1)
   total_run <- 1
   len_each_run <- N_sample_size/total_run
   
-  rio::export(lhs.sample.mt, file = here("results", "lhs_parset_project_efficacy.csv"))
+  rio::export(lhs.sample.mt, file = here("results", "IPD", "lhs_parset_project_efficacy.csv"))
   
   #turn off the task call to reset seed
   removeTaskCallback(1)
@@ -155,7 +155,7 @@ removeTaskCallback(1)
   total_run <- 1
   len_each_run <- N_sample_size/total_run
   
-  rio::export(lhs.sample.mt, file = here("results", "lhs_parset_project_duration.csv"))
+  rio::export(lhs.sample.mt, file = here("results", "IPD", "lhs_parset_project_duration.csv"))
   
   #turn off the task call to reset seed
   removeTaskCallback(1)
@@ -205,7 +205,7 @@ removeTaskCallback(1)
   total_run <- 1
   len_each_run <- N_sample_size/total_run
   
-  rio::export(lhs.sample.mt, file = here("results", "lhs_parset_project_competition.csv"))
+  rio::export(lhs.sample.mt, file = here("results", "IPD", "lhs_parset_project_competition.csv"))
   
   #turn off the task call to reset seed
   removeTaskCallback(1)
@@ -258,7 +258,7 @@ removeTaskCallback(1)
   total_run <- 1
   len_each_run <- N_sample_size/total_run
   
-  rio::export(lhs.sample.mt, file = here("results", "lhs_parset_modefit_efficacy.csv"))
+  rio::export(lhs.sample.mt, file = here("results", "IPD", "lhs_parset_modefit_efficacy.csv"))
   
   #turn off the task call to reset seed
   removeTaskCallback(1)
@@ -308,7 +308,7 @@ removeTaskCallback(1)
   total_run <- 1
   len_each_run <- N_sample_size/total_run
   
-  rio::export(lhs.sample.mt, file = here("results", "lhs_parset_modefit_duration.csv"))
+  rio::export(lhs.sample.mt, file = here("results", "IPD", "lhs_parset_modefit_duration.csv"))
   
   #turn off the task call to reset seed
   removeTaskCallback(1)
@@ -358,7 +358,7 @@ removeTaskCallback(1)
   total_run <- 1
   len_each_run <- N_sample_size/total_run
   
-  rio::export(lhs.sample.mt, file = here("results", "lhs_parset_modefit_competition.csv"))
+  rio::export(lhs.sample.mt, file = here("results", "IPD", "lhs_parset_modefit_competition.csv"))
   
   #turn off the task call to reset seed
   removeTaskCallback(1)
@@ -411,7 +411,7 @@ removeTaskCallback(1)
   total_run <- 1
   len_each_run <- N_sample_size/total_run
   
-  rio::export(lhs.sample.mt, file = here("results", "lhs_parset_project_efficacy_reduced.csv"))
+  rio::export(lhs.sample.mt, file = here("results", "IPD", "lhs_parset_project_efficacy_reduced.csv"))
   
   #turn off the task call to reset seed
   removeTaskCallback(1)
@@ -461,7 +461,7 @@ removeTaskCallback(1)
   total_run <- 1
   len_each_run <- N_sample_size/total_run
   
-  rio::export(lhs.sample.mt, file = here("results", "lhs_parset_project_efficacy_constant.csv"))
+  rio::export(lhs.sample.mt, file = here("results", "IPD", "lhs_parset_project_efficacy_constant.csv"))
   
   #turn off the task call to reset seed
   removeTaskCallback(1)
@@ -509,7 +509,7 @@ removeTaskCallback(1)
   total_run <- 1
   len_each_run <- N_sample_size/total_run
   
-  rio::export(lhs.sample.mt, file = here("results", "lhs_parset_project_pcv7serotypes.csv"))
+  rio::export(lhs.sample.mt, file = here("results", "IPD", "lhs_parset_project_pcv7serotypes.csv"))
   
   #turn off the task call to reset seed
   removeTaskCallback(1)
