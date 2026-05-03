@@ -264,7 +264,7 @@ observedDS <-
                 na.rm = TRUE,
                 agegp = stringr::str_sub(stg, 3, nchar(stg)),
                 agegp = factor(if_else(agegp == 'gp1', '<1y', if_else(agegp == 'gp2', '1-4y', if_else(agegp == 'gp3', '5-17y', '18+y'))), levels = c('<1y','1-4y','5-17y','18+y')),
-                stg = factor(stringr::str_sub(stg, 1, 1), levels = c('V','F','N')),
+                stg = factor(stringr::str_sub(stg, 1, 1), levels = c('F','V','N')),
                 cat = 'Observed') %>%
   dplyr::ungroup() %>%
   dplyr::rename('m'='value')
@@ -298,7 +298,7 @@ observedDS <-
                 na.rm = TRUE,
                 agegp = stringr::str_sub(stg, 3, nchar(stg)),
                 agegp = factor(if_else(agegp == 'gp1', '<1y', if_else(agegp == 'gp2', '1-4y', if_else(agegp == 'gp3', '5-17y', '18+y'))), levels = c('<1y','1-4y','5-17y','18+y')),
-                stg = factor(stringr::str_sub(stg, 1, 1), levels = c('V','F','N')),
+                stg = factor(stringr::str_sub(stg, 1, 1), levels = c('F','V','N')),
                 cat = 'Observed') %>%
   dplyr::ungroup() %>%
   dplyr::rename('m'='value')

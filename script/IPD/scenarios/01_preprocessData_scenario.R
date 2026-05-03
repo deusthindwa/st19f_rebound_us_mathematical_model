@@ -6,7 +6,7 @@
 
 #pcv7 annual cases
 ipd7 <-
-  rio::import(here::here("data", "usa_ipd.csv")) %>%
+  rio::import(here::here("data", "IPD", "usa_ipd.csv")) %>%
   dplyr::filter(st != "MISS", yearc <2010) %>%
   dplyr::mutate(agegp = if_else(agegp == 'Age <2', '0-1y', if_else(agegp == 'Age 2-4', '2-4y', if_else(agegp == 'Age 5-17', '5-17y', '18+y'))),
                 yearc = as.integer(yearc),
@@ -24,7 +24,7 @@ ipd7 <-
 
 #pcv7A annual cases
 ipd7A <-
-  rio::import(here::here("data", "usa_ipd.csv")) %>%
+  rio::import(here::here("data", "IPD", "usa_ipd.csv")) %>%
   dplyr::filter(st != "MISS", yearc >=2010, yearc <= 2019) %>%
   dplyr::mutate(agegp = if_else(agegp == 'Age <2', '0-1y', if_else(agegp == 'Age 2-4', '2-4y', if_else(agegp == 'Age 5-17', '5-17y', '18+y'))),
                 yearc = as.integer(yearc),
@@ -41,7 +41,7 @@ ipd7A <-
 
 #pcv13 annual cases
 ipd13 <-
-  rio::import(here::here("data", "usa_ipd.csv")) %>%
+  rio::import(here::here("data", "IPD", "usa_ipd.csv")) %>%
   dplyr::filter(st != "MISS", yearc >=2010, yearc <= 2019) %>%
   dplyr::mutate(agegp = if_else(agegp == 'Age <2', '0-1y', if_else(agegp == 'Age 2-4', '2-4y', if_else(agegp == 'Age 5-17', '5-17y', '18+y'))),
                 yearc = as.integer(yearc),

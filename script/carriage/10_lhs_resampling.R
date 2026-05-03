@@ -233,7 +233,7 @@
 source(here::here("script", "carriage", "01_preprocessData.R"))
 obs_traj <- df_EW
 
-#extract parameters
+#extract plausible parameter sets from LHS
 parset <- rio::import(here::here("results", "carriage", "lhs_parset.csv"))
 base1 <- parset$V1
 base2 <- parset$V2
@@ -243,9 +243,9 @@ compV <- parset$V5
 compF <- parset$V6
 compN <- parset$V7
 
-#load model simulated data
+#load model simulated data and remove any bad simulation
 pred_traj <- readRDS(here::here("results", "carriage", "saved_carr_dynamics.rds"))
-#pred_traj <- Filter(function(x) !is.null(x) && length(x) > 0, pred_traj)
+pred_traj <- Filter(function(x) !is.null(x) && length(x) > 0, pred_traj)
 
 #multinomial likelihood function
 calc_carr_logLik = function(obs_count_carr, model_prev_carr){
@@ -256,7 +256,7 @@ calc_carr_logLik = function(obs_count_carr, model_prev_carr){
 
 #multinomial likelihood for carriage given V, F, N and S states
 GOF_prev <- c()
-N_sample_size <- 1000
+N_sample_size <- 200000
 N_ages <- 4
 
 for (i in 1:N_sample_size) {
@@ -271,24 +271,173 @@ for (i in 1:N_sample_size) {
   GOF_prev[i] <- LL_prop
 }
 
-#select 1000 posterior samples
-XX <- 
-  data_frame(data.frame(GOF_prev) %>% mutate(resampled_rows = as.integer(rownames(.)))) %>%
-  dplyr::arrange(desc(GOF_prev)) %>%
-  dplyr::mutate(rownum = as.integer(rownames(.))) %>%
-  dplyr::filter(rownum <= 5000)
+# #select 1000 max likelihood samples
+# XX <-
+#   data_frame(data.frame(GOF_prev) %>% mutate(resampled_rows = as.integer(rownames(.)))) %>%
+#   dplyr::arrange(desc(GOF_prev)) %>%
+#   dplyr::mutate(rownum = as.integer(rownames(.))) %>%
+#   dplyr::filter(rownum <= 10000)
+# 
+# resampled_rows <- XX$resampled_rows
 
-resampled_rows <- XX$resampled_rows
+#==============================================================================
 
-#normalized weights to sum to 1 
-#GOF_prev <- GOF_prev[!is.na(GOF_prev)]
-# log_weights <- GOF_prev - max(GOF_prev)
-# weights <- exp(log_weights)
-# weights <- weights / sum(weights)
-# n_resamples <- N_sample_size/100 # keep 1-10 ratio
+#define some parameters
+#param_names <- c("base1", "base2", "base3", "base4", "compV", "compF", "compN")
+param_names <- c("V1", "V2", "V3", "V4", "V5", "V6", "V7")
+n_params  <- length(param_names)
+n_samples <- N_sample_size     # initial LHS draws (larger = better space coverage)
+n_retain  <- 10000     # number of parameter sets to retain after resampling
 
-#re-sample from the proposal distribution using the calculated weights
-#resampled_rows <- sample.int(seq_along(compV), size = n_resamples, replace = TRUE, prob = weights)
+#replace -Inf with the minimum finite LL (worst observed fit)
+ll_finite <- GOF_prev
+ll_finite[!is.finite(ll_finite)] <- min(ll_finite[is.finite(ll_finite)])
+
+#shift by maximum LL for numerical stability (log-sum-exp trick)
+#unlike NLL (shift by min), here we shift by max so the best sample → exp(0) = 1
+ll_shifted   <- ll_finite - max(ll_finite)    # shift so max = 0
+ll_shifted <- ll_shifted[ll_shifted != max(ll_finite)]
+weights_raw  <- exp(ll_shifted)               # un-normalized likelihoods
+weights_norm <- weights_raw / sum(weights_raw) # normalized to sum = 1
+sum(weights_norm)
+ess <- round(1 / sum(weights_norm^2)) #effective sample size (ess)
+cat(sprintf("\neffective sample size (ess): %d / %d\n", ess, n_samples))
+
+#retain parameter sets by likelihood-weighted resampling
+#draw n_retain indices WITH REPLACEMENT, where each LHS sample's probability of being selected equals its normalized likelihood weight.
+#this is Sequential Importance Resampling (SIR).
+set.seed(1988)
+resampled_rows <- sample(x = seq_len(n_samples), size = n_retain, replace = TRUE, prob = weights_norm)
+retained_idx <- sample(x = seq_len(n_samples), size = n_retain, replace = TRUE, prob = weights_norm)
+
+#retained parameter sets (n_retain x n_params matrix)
+retained_params <- parset[resampled_rows, , drop = FALSE]
+retained_ll     <- GOF_prev[resampled_rows]
+
+#confidence intervals from retained parameter sets
+#because resampling already encodes the likelihood weights, we compute CIs
+#using plain (unweighted) quantiles on the retained sets.
+
+ci_level <- 0.95
+probs    <- c((1-ci_level)/2, 0.50, 1-(1-ci_level)/2)
+
+ci_df <- do.call(rbind, lapply(param_names, function(p) {
+  q <- quantile(retained_params[, p], probs = probs)
+  data.frame(
+    Parameter = p,
+    Lower     = q[[1]],
+    Median    = q[[2]],
+    Upper     = q[[3]],
+    Width     = q[[3]] - q[[1]],
+    Mean      = mean(retained_params[, p]),
+    SD        = sd(retained_params[, p]),
+    row.names = NULL
+  )
+}))
+
+#export retained parameter sets=
+retained_df <- as.data.frame(retained_params)
+retained_df$log_likelihood <- retained_ll
+retained_df$weight         <- weights_norm[retained_idx]  # original LHS weight
+retained_df$rank           <- rank(-retained_ll)          # rank best-to-worst
+
+cat("\n=== Retained Parameter Sets (top 10 by LL) ===\n")
+print(head(retained_df[order(retained_df$log_likelihood, decreasing = TRUE), ],
+           n = 10),
+      digits = 4, row.names = FALSE)
+
+
+#Visualisation
+
+visualise_retained <- function(param, all_mat, ret_mat, ci, true_val = NULL) {
+
+  # Density of original LHS vs retained (resampled) sets
+  d_all <- density(all_mat[, param], adjust = 1.2)
+  d_ret <- density(ret_mat[, param], adjust = 1.2)
+
+  ylim <- range(c(d_all$y, d_ret$y))
+
+  plot(d_all, col = "grey60", lwd = 1.5, lty = 2,
+       main = paste("LHS vs Retained:", param),
+       xlab = param, ylab = "Density",
+       ylim = ylim, bty = "l")
+  lines(d_ret, col = "steelblue", lwd = 2.5)
+
+  # Shade CI on retained density
+  ci_lo <- ci[ci$Parameter == param, "Lower"]
+  ci_hi <- ci[ci$Parameter == param, "Upper"]
+  idx   <- d_ret$x >= ci_lo & d_ret$x <= ci_hi
+  polygon(c(d_ret$x[idx], rev(d_ret$x[idx])),
+          c(d_ret$y[idx], rep(0, sum(idx))),
+          col = adjustcolor("steelblue", alpha.f = 0.25), border = NA)
+
+  # Reference lines
+  abline(v = ci[ci$Parameter == param, "Median"],
+         col = "steelblue", lty = 2, lwd = 1.8)
+  abline(v = c(ci_lo, ci_hi), col = "firebrick", lty = 3, lwd = 1.8)
+  if (!is.null(true_val))
+    abline(v = true_val, col = "darkgreen", lwd = 2)
+
+  legend("topright",
+         legend = c("LHS prior",
+                    "Retained (likelihood-weighted)",
+                    sprintf("%.0f%% CI [%.3f, %.3f]", ci_level * 100, ci_lo, ci_hi),
+                    "Median",
+                    if (!is.null(true_val)) "True value" else NULL),
+         col = c("grey60", "steelblue", "firebrick", "steelblue",
+                 if (!is.null(true_val)) "darkgreen" else NULL),
+         lty = c(2, 1, 3, 2,
+                 if (!is.null(true_val)) 1 else NULL),
+         lwd = 2, bty = "n", cex = 0.80)
+}
+
+#pairwise scatter of retained sets (parameter correlation)
+pairs(
+  retained_params,
+  col  = adjustcolor("steelblue", alpha.f = 0.25),
+  pch  = 16,
+  cex  = 0.6,
+  main = sprintf("Retained Parameter Sets (n = %d)", n_retain)
+)
+
+#per-parameter density plots
+true_values <- c(mu = 1.5, sigma = 2.0)
+par(mfrow = c(1, n_params))
+for (p in param_names) {
+  visualise_retained(
+    param    = p,
+    all_mat  = parset,
+    ret_mat  = retained_params,
+    ci       = ci_df,
+    true_val = true_values[p]
+  )
+}
+par(mfrow = c(1, 1))
+
+
+#convergence and ci stability across resample sizes
+#verifies that n_retain is large enough for stable CIs
+resample_sizes <- c(100, 250, 500, 750, 1000)
+convergence <- do.call(rbind, lapply(resample_sizes, function(n) {
+  set.seed(7)
+  idx <- sample(seq_len(n_samples), size = n, replace = TRUE, prob = weights_norm)
+  do.call(rbind, lapply(param_names, function(p) {
+    q <- quantile(parset[idx, p], probs = probs)
+    data.frame(n_retain  = n,
+               Parameter = p,
+               Lower     = q[[1]],
+               Median    = q[[2]],
+               Upper     = q[[3]])
+  }))
+}))
+
+cat("\n=== CI stability across resample sizes ===\n")
+print(convergence, digits = 4, row.names = FALSE)
+
+
+#==============================================================================
+#==============================================================================
+
 pbase1 <- base1[resampled_rows]
 pbase2 <- base2[resampled_rows]
 pbase3 <- base3[resampled_rows]
@@ -378,15 +527,13 @@ post_trajPlot <-
   geom_errorbar(aes(x=agegp, y=Est,  ymin = Low, ymax = High, color=carrtype) , width = 0, size = 0.8, position = position_dodge(width = 0.2), stat = "identity") +
   scale_color_manual(values = c('#F8766D', 'gray40')) +
   guides(color = guide_legend(title="")) +
-  labs(title = "(c)", x = "Age group", y = "Carriage prevalence") +
+  labs(title = "", x = "Age group", y = "Carriage prevalence") +
   facet_grid(. ~ stg) +
   theme_bw(base_size = 14, base_family = "American Typewriter") +
   theme(panel.border = element_rect(colour = "black", fill = NA, size = 1)) +
   theme(strip.text.x = element_text(size = 18), strip.background = element_rect(fill = "gray90")) +
-  theme(legend.position = c(0.85,0.85))
-
-((modelstru/posteriorPlot) | post_trajPlot | plot_layout(ncol = 2, width = c(1,2)))
+  theme(legend.position = "bottom")
 
 ggsave(here::here("output", "carriage", "obs_fit_prevalence.png"),
-       plot = ((modelstru/posteriorPlot) | post_trajPlot | plot_layout(ncol = 2, width = c(1,2))),
-       width = 18, height = 10, unit = "in", dpi = 300)
+       plot = post_trajPlot,
+       width = 10, height = 6, unit = "in", dpi = 300)

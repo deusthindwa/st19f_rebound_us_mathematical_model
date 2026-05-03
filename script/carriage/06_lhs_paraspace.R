@@ -67,7 +67,7 @@
 addTaskCallback(function(...) {set.seed(1988); TRUE})
 
 #set up the parameter space
-N_sample_size <-100000
+N_sample_size <-500000
 
 #number of parameters to estimate
 N_varied_parameters <- 7
@@ -76,14 +76,23 @@ N_varied_parameters <- 7
 uniform_LHS <- randomLHS(N_sample_size, N_varied_parameters)
 lhs.sample.mt <- matrix(NA, nrow = N_sample_size, ncol = N_varied_parameters)
 
+# #prior uniform distribution of transmission parameters
+# lhs.sample.mt[,1] <- qunif(uniform_LHS[,1], min = 30, max = 55)
+# lhs.sample.mt[,2] <- qunif(uniform_LHS[,2], min = 1, max = 2)
+# lhs.sample.mt[,3] <- qunif(uniform_LHS[,3], min =  0, max = 0.5)
+# lhs.sample.mt[,4] <- qunif(uniform_LHS[,4], min =  0, max = 0.5)
+# lhs.sample.mt[,5] <- qunif(uniform_LHS[,5], min = 0.1, max = 2)#0-1
+# lhs.sample.mt[,6] <- qunif(uniform_LHS[,6], min = 0.1, max = 2)
+# lhs.sample.mt[,7] <- qunif(uniform_LHS[,7], min = 0.1, max = 2)
+
 #prior uniform distribution of transmission parameters
 lhs.sample.mt[,1] <- qunif(uniform_LHS[,1], min = 30, max = 55)
 lhs.sample.mt[,2] <- qunif(uniform_LHS[,2], min = 1, max = 2)
-lhs.sample.mt[,3] <- qunif(uniform_LHS[,3], min =  0, max = 0.5)
-lhs.sample.mt[,4] <- qunif(uniform_LHS[,4], min =  0, max = 0.5)
-lhs.sample.mt[,5] <- qunif(uniform_LHS[,5], min = 0.1, max = 2)#0-1
-lhs.sample.mt[,6] <- qunif(uniform_LHS[,6], min = 0.1, max = 2)
-lhs.sample.mt[,7] <- qunif(uniform_LHS[,7], min = 0.1, max = 2)
+lhs.sample.mt[,3] <- qunif(uniform_LHS[,3], min =  0, max = 1)
+lhs.sample.mt[,4] <- qunif(uniform_LHS[,4], min =  0, max = 1)
+lhs.sample.mt[,5] <- qunif(uniform_LHS[,5], min = 0, max = 2)#0-1
+lhs.sample.mt[,6] <- qunif(uniform_LHS[,6], min = 0, max = 2)
+lhs.sample.mt[,7] <- qunif(uniform_LHS[,7], min = 0, max = 2)
 
 #total runs and number of simulations per run
 total_run <- 1
