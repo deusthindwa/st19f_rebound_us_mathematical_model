@@ -1,1 +1,0 @@
-# st19f_rebound_us_mathematical_model
