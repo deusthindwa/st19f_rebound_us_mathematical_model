@@ -160,7 +160,7 @@ All sampled parameters live on the **log scale** in Stan parameters block
   - (04a_fit_scenario1.R) scenario 1: estimate delta_F_13 ~ Beta(3, 9) -> fit_scenario1.rds
   - (04b_fit_scenario2.R) scenario 2: estimate omega_F_13 ~ Gamma(3, 3) -> fit_scenario2.rds
   - (04c_fit_scenario3.R) scenario 3: estimate rr_N_post  ~ Beta(7, 2) -> fit_scenario3.rds
-- (05_post_process_pcv13.R) per-scenario diagnostics, post-PCV13 carriage prevalence, counterfactual forward sim, cross-scenario WAIC
+- (05_post_process_pcv13.R) per-scenario diag, post-PCV13 carriage prev, counterfactual forward sim, cross-scenario WAIC
 
 ## Workflow detail
 - The PCV13 model adds a **third vaccination stratum**: `S_13, V_13, F_13, N_13, VF_13, NV_13, NF_13`. 
@@ -170,7 +170,7 @@ All sampled parameters live on the **log scale** in Stan parameters block
   - PCV13 starts in 2010 (`vacc_cov_pcv13_year = c(0, …, 0, 0.95, 0.95, …)`). 
   - Existing PCV7 cohorts continue to wane and age into PCV13-era years.
 - The first **CCRs.** `CCR_1999` computed inside Stan from year-1 incidence and applied to 1999–2009 predictions. 
-- A second **CCRs.** `CCR_2010 = obs_IPD_2010 / inc_2009_model` computed inside Stan at year 11 and applied to 2010–2019 predictions.
+- A second **CCRs.** `CCR_2010=obs_IPD_2010/inc_2009_model` computed in Stan at yr 11 & applied to 2010–2019 predictions.
 - This reflects the serotype reshuffle from PCV7 to PCV13 (PCV13 covers 6 more serotypes).
 - **Likelihood.** Summed over **2010–2019** (`n_fit_start_t = 12`). 1999–2009 dynamics do not enter the likelihood.
 - **Three scenarios in one Stan file, three fits.** Each scenario estimates **exactly one** PCV13 F-related parameter; 
