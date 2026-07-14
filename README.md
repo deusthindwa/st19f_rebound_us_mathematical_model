@@ -6,9 +6,9 @@
 - In the first part of the work, the model pneumococcal model is fitted to the English carriage data in Stan
 - SIS model of pneumococcal carriage transmission for three serotype groups (V = vaccine, F = 19F, N = non-vaccine) across four age groups (<1y, 1-4y, 5-17y, 18+y).
 - Seven free parameters with informative priors:
-  - (a) log_rho_age[a], 4 age-specific log-baselines ~ Normal( rho_age_logmean[a], rho_age_logsd )
+  - (a) log_rho_age[a]: 4 age-specific log-baselines ~ Normal( rho_age_logmean[a], rho_age_logsd )
   - susceptibility is shared across serotypes: rho_V[i] = rho_F[i] = rho_N[i] = rho_age[i]
-  - (b) eps_V, eps_F, eps_N, 3 serotype-specific competition (relative risk of co-colonisation) in (0, 1) ~ Beta( eps_alpha, eps_beta )
+  - (b) eps_V, eps_F, eps_N: 3 serotype-specific competition (relative risk of co-colonisation) in (0, 1) ~ Beta( eps_alpha, eps_beta )
 - Prior centres for the age-baseline are drawn from pneumococcal studies (e.g. Ojal 2017, Choi 2011/2012; Bottomley 2017)
 - Beta(2,2) gives a unimodal weakly-informative prior on each competition parameter, centred at 0.5 with sd ~0.224.
 - Time units in years
@@ -24,15 +24,17 @@
 - Similar dynamics as pre-PCV7 with addition of vaccination component
 - R + Stan implementation of the deterministic age-structured Susceptible-Infected-Susceptible model for pneumococcal carriage and IPD. 
 - The Stan model uses `ode_bdf_tol` (backward differentiation) rather than `ode_rk45_tol` to manage stiffness of fit.
-- Four age groups (<1y, 1–4y, 5–17y, 18+y), three serotype classes (V = PCV7 vaccine type, F = serotype 19F, N = non-vaccine type), single and dual carriage.
+- Four age groups (<1y, 1–4y, 5–17y, 18+y)
+- Three serotype classes (V = PCV7 vaccine type, F = serotype 19F, N = non-vaccine type), single and dual carriage.
 
-- PCV7 was introduced in **2000** in the US. Vaccination is modelled **at birth** with a four-step coverage ramp:
-- Birth cohort, vaccination coverage: 2000 **43 %**, 2001 **98 %**, 2002, **98 %**, 2003 **98 %**, 2004+ **90 %**
+- PCV7 introduced in **2000** in the US. Vaccination is modelled **at birth** with a four-step coverage ramp:
+- Birth cohort, vaccination coverage: 2000 43%, 2001+ 95%
 
-- At every year boundary, that fraction of newborns enters `S_7<1y` (vaccinated) and the rest enter `S<1y` (unvaccinated). 
+- At every year boundary, fraction of newborns enters `S_7<1y` (vaccinated) and rest enter `S<1y` (unvaccinated). 
 - The vaccine FOI reduction acts on infants for their full first year of life. 
 - Older age groups acquire vaccinated individuals only by aging up, no additional vaccination is applied at any aging boundary. 
 - 1999 is fully pre-vaccination; both 1999 and 2000 are part of the Poisson likelihood.
+
 
 The flow is:
 1. **The model simulates carriage incidence each year** (1999..2009) inside Stan, tracking **unvaccinated-stratum** and **vaccinated-stratum** incidence separately (`inc_year_unvacc`, `inc_year_vacc`)
@@ -54,7 +56,7 @@ The natural-scale variables are recovered as `exp(log_*)` in `transformed parame
 The natural-scale parameter constraints are tied to **prior 99% CrI**, computed as `qbeta(0.005/0.995, 13, 7)` and `qgamma(0.005/0.995, 2, 8)` 
 Constraints are passed to Stan as data, so the sampler can only explore inside the prior's plausible region.
 
-| Symbol | Code name | Sampled as | Natural-scale bounds | Prior | Role |
+| Symbol | Name | Sampled as | Natural-scale | Prior | Role |
 |---|---|---|---|---|---|
 | δ_V,7 | `delta_V` | `log_delta_V` | prior 95 % CrI ≈ (0.44, 0.83) | **Beta(13, 7)** (mean 0.765) | **Estimated** |
 | δ_F,7 | `delta_F` | `log_delta_F` | prior 95 % CrI ≈ (0.48, 0.83) | **Beta(13, 7)** (mean 0.65) | **Estimated** |
@@ -133,50 +135,14 @@ Aging rates (1, 1/4, 1/13, 1/59) are used
 
 # PART C (Dynamics during pre-PCV7, PCV7 & PCV13 periods)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Introduction
-
-# Pneumococcal IPD age-structured SIS model
-
-- R + Stan implementation of the deterministic age-structured Susceptible-Infected-Susceptible model for pneumococcal carriage and IPD. 
-- Four age groups (<1y, 1–4y, 5–17y, 18+y), three serotype classes (V = PCV7 vaccine type, F = 19F, N = non-vaccine), single and dual carriage.
-
-- PCV7 was introduced in **2000** in the US. 
-- Vaccination is modelled **at birth** with a single coverage step before reaching steady state
-- Birth cohort, vaccination coverage: 2000 **43 %**, 2001 **98 %**, 2002, **98 %**, 2003 **98 %**, 2004+ **90 %**
-- At every year boundary, that fraction of newborns enters `S_7<1y` (vaccinated) and the rest enter `S<1y` (unvaccinated). The vaccine FOI reduction therefore acts on infants for their full first year of life. Older age groups acquire vaccinated individuals only by aging up — no additional vaccination is applied at any aging boundary. 1999 is fully pre-vaccination; both 1999 and 2000 are part of the Poisson likelihood.
-
-The flow is:
-
-1. **The model simulates carriage incidence each year** (1999..2009) inside Stan, tracking **unvaccinated-stratum** and **vaccinated-stratum** incidence separately (`inc_year_unvacc`, `inc_year_vacc`).
-2. **CCR_1999 is computed inside Stan on the fly**: `CCR_1999[a, k] = obs_IPD_1999[a, k] / model_carriage_incidence_1999[a, k]`. Because year 1999 is pre-vaccination, total incidence equals unvaccinated incidence here, so the CCR is well-defined.
-3. **Predicted IPD** for year *t* and age *a* is simply total carriage incidence times the 1999 CCR — there is **no post-ODE progression-blocking factor**:
-   - *V*: `pred_ipd = (inc_V_unvacc + inc_V_vacc) · CCR_V[1999, a]`
-   - *F*: `pred_ipd = (inc_F_unvacc + inc_F_vacc) · CCR_F[1999, a]`
-   - *N*: `pred_ipd = (inc_N_unvacc + inc_N_vacc) · CCR_N[1999, a]`  (no vaccine effect)
-   - The vaccine effect on V and F operates entirely through reduced FOI in the vaccinated stratum inside the ODE. In 1999 there are no vaccinated cohorts so `pred_ipd_1999 ≈ obs_ipd_1999` by construction.
-4. **Poisson likelihood** is summed over all 11 years (1999..2009).
-
 ## Parameters
 
-All sampled parameters live on the **log scale** in the Stan parameters block (`log_delta_V`, `log_delta_F`, `log_omega_V`, `log_omega_F`, `log_q_age[1..4]`); the natural-scale variables `delta_V`, `delta_F`, `omega_V`, `omega_F`, `q_age` are recovered as `exp(log_*)` in `transformed parameters`. The implied prior on the natural scale is **log-uniform** — i.e. uniform on the log scale — within the original natural-scale bounds.
+All sampled parameters live on the **log scale** in Stan parameters block 
 
-| Symbol | Code name (natural) | Sampled as | Natural-scale bounds | Role |
+| Symbol | Name (natural) | Sampled as | Natural-scale | Role |
 |---|---|---|---|---|
-| δ_V,7 | `delta_V` | `log_delta_V` | (0.01, 0.99) safety; Beta(14, 6) prior | **Estimated**, mean 0.70 |
-| δ_F,7 | `delta_F` | `log_delta_F` | (0.01, 0.99) safety; Beta(14, 6) prior | **Estimated**, mean 0.70 |
+| δ_V,7 | `delta_V` | `log_delta_V` | (0.01, 0.99) safety; Beta(13, 7) prior | **Estimated**, mean 0.70 |
+| δ_F,7 | `delta_F` | `log_delta_F` | (0.01, 0.99) safety; Beta(13, 7) prior | **Estimated**, mean 0.70 |
 | ω_V,7 | `omega_V` | `log_omega_V` | (0.001, 5.0) safety; Gamma(9, 75) prior | **Estimated**, mean 0.12 (duration ~8.3 yr) |
 | ω_F,7 | `omega_F` | `log_omega_F` | (0.001, 5.0) safety; Gamma(9, 75) prior | **Estimated**, mean 0.12 (duration ~8.3 yr) |
 | q_age[1] | `q_age[1]` | `log_q_age[1]` | (0.0125, 0.0174) | Uncertainty propagation, log-uniform |
