@@ -194,4 +194,4 @@ All other parameters are **propagated by sampling from the previous posteriors**
 
 -The three R scripts (`04a_/04b_/04c_`) are independent
 - They all source `04_fit_pcv13_common.R` for shared Stan-data assembly, then layer on per-scenario bounds and `scenario` integer
-- Independent `fit_scenarioN.rds` files are saved, allowing 3 fits to be submitted as parallel HPC jobs (`07_pneumoipd_scenario_batch`)
+- Independent `fit_scenarioN.rds` files saved, allowing 3 fits to be submitted as parallel HPC jobs (`07_pneumoipd_scenario_batch`)
