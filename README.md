@@ -36,7 +36,7 @@
 ## The workflow
 1. **The model simulates carriage incidence each year** (1999..2009) inside Stan
 2. Model tracks **unvaccinated-stratum** and **vaccinated-stratum** incidence separately (`inc_year_unvacc`, `inc_year_vacc`)
-3. **CCR_1999 is computed inside Stan**: `CCR_1999[a, k] = obs_IPD_1999[a, k] / model_carriage_incidence_1999[a, k]`.
+3. **CCR_1999 is computed in Stan**: `CCR_1999[a, k] = obs_IPD_1999[a, k]/model_carriage_incidence_1999[a, k]`.
 4. Because 1999 is pre-vaccination, total incidence equals unvaccinated incidence, so the CCR is well-defined.
 5. **Predicted IPD** for year *t* and age *a* is simply total carriage incidence times the 1999 CCR
    - *V*: `pred_ipd = (inc_V_unvacc + inc_V_vacc) · CCR_V[1999, a]`
@@ -67,41 +67,41 @@
 2. Bounds are marginal 99th quantiles of carriage-fit posterior.
 3. Aging rates (1, 1/4, 1/13, 1/59) are used
 
-## Workflow detail
+## Code workflow
 1. (`06_demographic_calibration.R`) **Demographic calibration of mortality or net migration** .
    - An **explicit demographic model**: the four-compartment linear ODE.
    - Integrated (12 monthly Euler substeps per year) forward from the **given 1999 initial population**
-   - `(<1y=258 310, 1-4y=1 033 240, 5-17y=3 497 789, 18+y=14 271 440)` using **crude birth rates** (1999–2019). 
-   - 4 age-specific net mortality rates `mu_age = (mu_<1y, mu_1-4y, mu_5-17y, mu_18+y)` calibrated against observed population counts.
-   - Calibration window is **every year of observed pop available** in `fixed_data$pop_matrix` intersected with `SIM_YEARS` (1999–2019) 
+   - `(<1y=258 310, 1-4y=1 033 240, 5-17y=3 497 789, 18+y=14 271 440)` **crude birth rates** (1999–2019)
+   - 4 age-specific net mortality rates `mu_age = (mu_<1y, mu_1-4y, mu_5-17y, mu_18+y)` calibrated against observed pop counts.
+   - Calibration is **every year of observed pop available** in `fixed_data$pop_matrix` intersected with `SIM_YEARS` (1999–2019) 
 2. (`01_data_prep.R`) **Data preparation** keeps.
    - Unsymmetrised contact matrix
    - Observed IPD cases (1999-2009)
    - Fixed clearance rates `γ = 365.25 / duration_days`. 
    - The `q_lower/q_upper` and `rr_*_lower/rr_*_upper` 
-3. (`02_pre_pcv_sim.R`) **R seed burn-in**.
+3. (`02_pre_pcv_sim.R`) **R seed burn-in**
    - Runs 4-age × 7-compartment SIS ODE for 20 years with **posterior MEAN** of `q_age` / `rr_*` (from `carriage_fit.rds`) 
-   - Runs fixed 1999 populations, with rescales pop, discrete aging  at each year boundary. 
-   - Outputs a state vector that is already close to pre-PCV steady state. 
-   - Stan re-equilibrates this state for each MCMC draw via its own short burn-in.
-4. (`03_pneumo_pcv.stan`) **Stan model**.
-   - **Independent log-uniform priors on `q_age` and `rr_V/F/N`, no cross-parameter correlation is imposed (computationally expensive).
-   - **Prior-CrI parameter bounds on δ/ω** formed in `transformed data` and used in the `parameters` block declarations. 
-   - The prior shape (Beta(13, 7) on δ, Gamma(2, 8) on ω) applied in the model block with the exp() Jacobian.
-   - **Explicit demographic year-boundary update** (`age_demog_step`). 12 monthly Euler substeps integrate linear demog ODE for 1 year. 
+   - Runs fixed 1999 populations, with rescales pop, discrete aging  at each year boundary
+   - Outputs a state vector that is already close to pre-PCV steady state
+   - Stan re-equilibrates this state for each MCMC draw via its own short burn-in
+4. (`03_pneumo_pcv.stan`) **Stan model**
+   - **Independent log-uniform priors on `q_age` and `rr_V/F/N`, no cross-parameter correlation is imposed (computational)
+   - **Prior-CrI parameter bounds on δ/ω** formed in `transformed data` and used in the `parameters` block declarations
+   - The prior shape (Beta(13, 7) on δ, Gamma(2, 8) on ω) applied in the model block with the exp() Jacobian
+   - **Explicit demographic year-boundary update** (`age_demog_step`). 12 monthly Euler substeps integrate linear demog ODE for 1yr
    - Per substep, computes per-age pop from compartment sums, apply mortality, aging to all 14 carriage states uniformly per age 
-   - Inject `birth_rate_year[t] × total_pop × dt` newborns into `S<1y` and `S_7<1y` split by `vacc_cov_year[t]`. pop evolves naturally.
+   - Inject `birth_rate_year[t] × total_pop × dt` newborns into `S<1y` & `S_7<1y` by `vacc_cov_year[t]`. Pop evolves naturally
    - **In-Stan burn-in.** Uses `age_rescale_burnin` (no birth/death/aging) to hold pop at `init_pop_1999` while carriage equilibrates. 
-   - Receives the R seed state and integrates `n_burn` more years (currently 20) using **current draw's** `q_age` and `rr_*`.
-   - The 1999 symmetrised contact matrix is built once in `transformed data` from `contact_raw` and `init_pop_1999`.
+   - Receives the R seed state and integrates `n_burn` more years (currently 20) using **current draw's** `q_age` and `rr_*`
+   - The 1999 symmetrised contact matrix is built once in `transformed data` from `contact_raw` and `init_pop_1999`
    - **Fit loop** over years 1999..2009. At the start of each year the model recomputes per-age pop from compartments
-   - Model then symmetrises `contact_raw` against it, so FOI normalisation & contact intensities are consistent with carriage state. 
-   - Yr1 (1999) integrates 1yr of dynamics, resulting incidence is basis for `ccr_1999[a, k] = obs_ipd_1999[a, k]/inc_1999_model[a, k]`.
-   - Year-boundary update is `age_demog_step`.
+   - Model then symmetrises `contact_raw` against it, so FOI normalisation & contact intensities are consistent with carriage state
+   - Yr1 (1999) integrates 1yr of dynamics, resulting incidence is basis `ccr_1999[a, k]=obs_ipd_1999[a, k]/inc_1999_model[a, k]`
+   - Year-boundary update is `age_demog_step`
    - **Predicted IPD.** `pred_ipd[t, a, k] = (inc_unvacc + inc_vacc) · CCR_1999[a, k]` for every year, age, and serotype.
    - **Generated quantities** include
      - `foi_year`, `carr_year_start`, `prev_year_start`, `carr_year_end`, `prev_year_end`, `model_pop_year_start`,
-     - `model_pop_year_end`, `inc_year`, `pred_ipd`, `pred_ipd_rep`, `log_lik`, `ccr_1999`, `duration_V`, `duration_F`.
+     - `model_pop_year_end`, `inc_year`, `pred_ipd`, `pred_ipd_rep`, `log_lik`, `ccr_1999`, `duration_V`, `duration_F`
 
 5. (`04_fit_model.R`) **MCMC model initiation**.
    - Loads all relevant R scripts.
