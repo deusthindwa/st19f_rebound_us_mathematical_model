@@ -46,7 +46,7 @@ source(here::here("01_data_prep.R"))
 #load demographic calibration
 if (!file.exists(
   here::here("demographic_model.rds"))
-  #here::here("results", "ipd_model_scenarios", "demographic_model.rds"))
+  #here::here("results", "ipd_model_scenarios", "demographic_model.rds")
   ) {
   stop("06_demographic_calibration.rds not found -- expected user-supplied previous fit")
 }
