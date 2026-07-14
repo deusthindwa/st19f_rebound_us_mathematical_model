@@ -1,10 +1,27 @@
 
-# Pneumococcal IPD age-structured SIS model
+# Deterministic Age-Structured Susceptible-Infected-Susceptible (SIS) Pneumococcal Model
 
-# PART A
+# PART A (Dynamics during Pre-PCV7 period)
+
+- In the first part of the work, the model pneumococcal model is fitted to the English carriage data in Stan
+- SIS model of pneumococcal carriage transmission for three serotype groups (V = vaccine, F = 19F, N = non-vaccine) across four age groups (<1y, 1-4y, 5-17y, 18+y).
+- Seven free parameters with informative priors:
+  - (a) log_rho_age[a], 4 age-specific log-baselines ~ Normal( rho_age_logmean[a], rho_age_logsd )
+  - susceptibility is shared across serotypes: rho_V[i] = rho_F[i] = rho_N[i] = rho_age[i]
+  - (b) eps_V, eps_F, eps_N, 3 serotype-specific competition (relative risk of co-colonisation) in (0, 1) ~ Beta( eps_alpha, eps_beta )
+- Prior centres for the age-baseline are drawn from pneumococcal studies (e.g. Ojal 2017, Choi 2011/2012; Bottomley 2017)
+- Beta(2,2) gives a unimodal weakly-informative prior on each competition parameter, centred at 0.5 with sd ~0.224.
+- Time units in years
+- Seven compartments per age group: S, V, F, N, VF, NV, NF.
+- Dual-carriage clearance: each component clears independently.
+- Aging modelled as 1/(width of age group).
+
+
+# PART B (Dynamics during pre-PCV7 & PCV7 periods)
 
 ## Introduction
 
+- Similar dynamics as pre-PCV7 with addition of vaccination component
 - R + Stan implementation of the deterministic age-structured Susceptible-Infected-Susceptible model for pneumococcal carriage and IPD. 
 - The Stan model uses `ode_bdf_tol` (backward differentiation) rather than `ode_rk45_tol` to manage stiffness of fit.
 - Four age groups (<1y, 1–4y, 5–17y, 18+y), three serotype classes (V = PCV7 vaccine type, F = serotype 19F, N = non-vaccine type), single and dual carriage.
@@ -114,7 +131,7 @@ Aging rates (1, 1/4, 1/13, 1/59) are used
 
 
 
-# PART B
+# PART C (Dynamics during pre-PCV7, PCV7 & PCV13 periods)
 
 
 
