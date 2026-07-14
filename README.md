@@ -57,7 +57,7 @@
 
 | Symbol | Name | Sampled as | Natural-scale | Prior | Role |
 |---|---|---|---|---|---|
-| δ_V,7 | `delta_V` | `log_delta_V` | prior 95 % CrI ≈ (0.44, 0.83) | **Beta(13, 7)** (mean 0.765) | **Estimated** |
+| δ_V,7 | `delta_V` | `log_delta_V` | prior 95 % CrI ≈ (0.48, 0.83) | **Beta(13, 7)** (mean 0.765) | **Estimated** |
 | δ_F,7 | `delta_F` | `log_delta_F` | prior 95 % CrI ≈ (0.48, 0.83) | **Beta(13, 7)** (mean 0.65) | **Estimated** |
 | ω_V,7 | `omega_V` | `log_omega_V` | prior 95 % CrI ≈ (0.03, 0.697) | **Gamma(2, 8)** (mean 0.25, duration ~4 yr) | **Estimated** |
 | ω_F,7 | `omega_F` | `log_omega_F` | prior 95 % CrI ≈ (0.03, 0.697) | **Gamma(2, 8)** (mean 0.25, duration ~4 yr) | **Estimated** |
@@ -124,15 +124,14 @@
 # PART C (Dynamics in pre-PCV, PCV7 & PCV13 periods)
 
 ## Parameters
-
 All sampled parameters live on the **log scale** in Stan parameters block 
 
 | Symbol | Name (natural) | Sampled as | Natural-scale | Role |
 |---|---|---|---|---|
-| δ_V,7 | `delta_V` | `log_delta_V` | (0.01, 0.99); Beta(13, 7) prior | **Estimated**, mean 0.70 |
-| δ_F,7 | `delta_F` | `log_delta_F` | (0.01, 0.99); Beta(13, 7) prior | **Estimated**, mean 0.70 |
-| ω_V,7 | `omega_V` | `log_omega_V` | (0.001, 5.0); Gamma(2, 8) prior | **Estimated**, mean 0.12 (duration ~8.3 yr) |
-| ω_F,7 | `omega_F` | `log_omega_F` | (0.001, 5.0); Gamma(2, 8) prior | **Estimated**, mean 0.12 (duration ~8.3 yr) |
+| δ_V,7 | `delta_V` | `log_delta_V` | (0.806, 0.875) | Uncertainty propagation, log-uniform |
+| δ_F,7 | `delta_F` | `log_delta_F` | (0.709, 0.791) | Uncertainty propagation, log-uniform |
+| ω_V,7 | `omega_V` | `log_omega_V` | (0.244, 0.330) | Uncertainty propagation, log-uniform |
+| ω_F,7 | `omega_F` | `log_omega_F` | (0.092, 0.958) | Uncertainty propagation, log-uniform |
 | q_age[1] | `q_age[1]` | `log_q_age[1]` | (0.0125, 0.0174) | Uncertainty propagation, log-uniform |
 | q_age[2] | `q_age[2]` | `log_q_age[2]` | (0.0150, 0.0185) | Uncertainty propagation, log-uniform |
 | q_age[3] | `q_age[3]` | `log_q_age[3]` | (0.00864, 0.0108) | Uncertainty propagation, log-uniform |
@@ -141,16 +140,16 @@ All sampled parameters live on the **log scale** in Stan parameters block
 | rr_F | `rr_F` | `log_rr_F` | (0.352, 0.952)  | Uncertainty propagation, log-uniform |
 | rr_N | `rr_N` | `log_rr_N` | (0.178, 0.524)  | Uncertainty propagation, log-uniform |
 
-- The four PCV7 parameters are **estimated from the IPD data**. 
-- The four `q_age` entries and the three `rr_*` are *uncertainty-propagation* parameters
-- sampled on the log scale from log-uniform priors per MCMC iteration so the posterior of the four estimated parameters reflects 
-- parametric uncertainty in age-specific susceptibility and in the co-colonisation relative risks. 
+- The 4 PCV7 parameters are *uncertainty propagation* 
+- The 4 `q_age` parameters are are *uncertainty propagation*
+- The 3 `rr_*` parameters are *uncertainty-propagation*
+- Sampled on the log scale from log-uniform priors per MCMC iteration
+- Posterior of eatimated PCV13 parms will reflect uncertainty in age susceptibility, in co-colonisation risks & vaccine effects. 
 - `rr_V7`, `rr_F7`, `rr_N7` in the PCV7-vaccinated population share the same parameter as their unvaccinated counterparts
 
-### Workflow details (1999-2019, three PCV13 scenarios; fitting on 2010-2019 only)
-
+## Three PCV13 scenarios (1999-2019, but fitting to 2010-2019 only)
 - (01_data_prep.R) fixed parameters, contact matrix, US populations 1999, observed IPD 1999-2019
-- (02_pre_pcv_sim.R) R burn-in to produce a SEED state
+- (02_pre_pcv_sim.R) R burn-in to produce a initial states of carriage pre-PCV
 - (06_demographic_calibration.R) fits per-age net mortality & full population trajectory
 - (03_pneumo_pcv13.stan) Stan model for 1999-2019 with the following 
   - Three vaccination strata (unvacc + PCV7 + PCV13) 
@@ -161,25 +160,21 @@ All sampled parameters live on the **log scale** in Stan parameters block
   - (04a_fit_scenario1.R) scenario 1: estimate delta_F_13 ~ Beta(3, 9) -> fit_scenario1.rds
   - (04b_fit_scenario2.R) scenario 2: estimate omega_F_13 ~ Gamma(3, 3) -> fit_scenario2.rds
   - (04c_fit_scenario3.R) scenario 3: estimate rr_N_post  ~ Beta(7, 2) -> fit_scenario3.rds
-- (05_post_process_pcv13.R) per-scenario diagnostics, post-PCV13 carriage prevalence, counterfactual forward sim, cross-scenario WAIC comparison
-
+- (05_post_process_pcv13.R) per-scenario diagnostics, post-PCV13 carriage prevalence, counterfactual forward sim, cross-scenario WAIC
 
 ## Workflow detail
-
 - The PCV13 model adds a **third vaccination stratum**: `S_13, V_13, F_13, N_13, VF_13, NV_13, NF_13`. 
 - The Stan state grows from 80 to **96** states 
   - 21 carriage families + 3 total incidence accumulators per age × 4 ages). 
   - PCV7 vaccination stops in 2010 (`vacc_cov_pcv7_year = c(0.43, 0.95, …, 0.95, 0, 0, …)`)
   - PCV13 starts in 2010 (`vacc_cov_pcv13_year = c(0, …, 0, 0.95, 0.95, …)`). 
   - Existing PCV7 cohorts continue to wane and age into PCV13-era years.
-
-- (a) The first **CCRs.** `CCR_1999` computed inside Stan from year-1 incidence and applied to 1999–2009 predictions. 
-- (b) A second case-carrier ratio `CCR_2010 = obs_IPD_2010 / inc_2009_model` is computed inside Stan at year 11 and applied to 2010–2019 predictions.
+- The first **CCRs.** `CCR_1999` computed inside Stan from year-1 incidence and applied to 1999–2009 predictions. 
+- A second **CCRs.** `CCR_2010 = obs_IPD_2010 / inc_2009_model` computed inside Stan at year 11 and applied to 2010–2019 predictions.
 - This reflects the serotype reshuffle from PCV7 to PCV13 (PCV13 covers 6 more serotypes).
-
-- **Likelihood.** Summed only over **2010–2019** (`n_fit_start_t = 12`). 1999–2009 dynamics inform the obs-vs-pred plot and the CCR_2010 calculation but do not enter the likelihood.
+- **Likelihood.** Summed over **2010–2019** (`n_fit_start_t = 12`). 1999–2009 dynamics do not enter the likelihood.
 - **Three scenarios in one Stan file, three fits.** Each scenario estimates **exactly one** PCV13 F-related parameter; 
-- the other two are **set equal to their PCV7 counterparts** (which are propagated from `ipd_fit`, `carriage_fit`):
+- The other two are **set equal to their PCV7 counterparts** (which are propagated from `ipd_fit`, `carriage_fit`):
 
 | Scenario | Estimated (PCV13) | Prior | The other two are set to |
 |---|---|---|---|
@@ -187,9 +182,7 @@ All sampled parameters live on the **log scale** in Stan parameters block
 | 2 | ω_F^13 (PCV13 waning vs F)  | Gamma(3, 3) | δ_F^13 = δ_F^7,  rr_N^13 = rr_N^7 |
 | 3 | rr_N^13 (post-PCV13 N rel. risk) | Beta(7, 2) | δ_F^13 = δ_F^7,  ω_F^13 = ω_F^7 |
 
-
 All other parameters are **propagated by sampling from the previous posteriors**:
-
 | Parameter | Source | Period |
 |---|---|---|
 | `log_q_age[1..4]`, `log_rr_V`, `log_rr_F` | `carriage_fit.rds` | pre + post (single sample per iter) |
@@ -199,7 +192,6 @@ All other parameters are **propagated by sampling from the previous posteriors**
 | `log_omega_V_7`, `log_omega_V_13` (= V_7) | `ipd_fit.rds` | pre + post |
 | `log_omega_F_7` | `ipd_fit.rds` | pre only |
 
-
 -The three R scripts (`04a_/04b_/04c_`) are independent
-- They all source `04_fit_pcv13_common.R` for the shared Stan-data assembly, then layer on the per-scenario bounds and `scenario` integer
-- Independent `fit_scenarioN.rds` files are saved. This is allows three fits to be submitted as parallel HPC jobs (`07_pneumoipd_scenario_batch`)
+- They all source `04_fit_pcv13_common.R` for shared Stan-data assembly, then layer on per-scenario bounds and `scenario` integer
+- Independent `fit_scenarioN.rds` files are saved, allowing 3 fits to be submitted as parallel HPC jobs (`07_pneumoipd_scenario_batch`)
