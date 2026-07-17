@@ -44,7 +44,7 @@
    - *N*: `pred_ipd = (inc_N_unvacc + inc_N_vacc) · CCR_N[1999, a]`  (no vaccine effect)
    - Vaccine effect on V, F operates through reduced FOI in vaccinated stratum inside the ODE 
    - In 1999 there are no vaccinated cohorts so `pred_ipd_1999 ≈ obs_ipd_1999` by construction
-6. **Poisson likelihood** is summed over all 11 years (1999..2009).
+6. **Poisson likelihood** is summed over 9 years (1999..2007), 2008-2009 is OOS predictions.
 
 ## Parameters
 
