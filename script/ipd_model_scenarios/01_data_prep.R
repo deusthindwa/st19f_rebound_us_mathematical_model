@@ -108,7 +108,7 @@ obs_ipd <- tibble::tribble(
   2007,     4,    4,    6,  272,    4,    0,    3,   30,  277,   73,  121, 2668,
   2008,     4,    6,    4,  226,    1,    2,    1,   23,  257,   58,  117, 2930,
   2009,     2,    2,    7,  159,    1,    2,    1,   26,  277,   80,  147, 2958,
-  2010,   141,   96,   65, 1340,    1,    1,    1,   26,   89,   54,   40, 1599, #EXCEPTIONAL: the number fo F_3 cases in 2010 was 0 but replaced it with 1 so that CCRs are well define for 2010-2019
+  2010,   141,   96,   65, 1340,    1,    1,    1,   26,   89,   54,   40, 1599, #EXCEPTIONAL: the number for F_3 cases in 2010 was 0 but replaced it with 1 so that CCRs are well defined for 2010-2019
   2011,    36,   39,   49, 1069,    3,    1,    2,   20,  111,   52,   45, 1781,
   2012,    15,   15,   33,  709,    1,    2,    5,   32,   92,   55,   57, 1757,
   2013,     9,   18,   21,  619,    2,    0,    5,   37,   93,   58,   54, 2058,

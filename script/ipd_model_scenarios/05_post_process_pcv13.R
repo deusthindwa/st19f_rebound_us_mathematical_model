@@ -61,21 +61,13 @@ process_scenario <- function(scenario_id, estimated_par_name, prior_overlay) {
   if (length(pars_for_trace) > 0) {
     p_trace <- bayesplot::mcmc_trace(fit$draws(), pars = pars_for_trace) +
       ggtitle(sprintf("Trace -- scenario %d (%s)", scenario_id, estimated_par_name))
-    
-    ggsave(here::here('output', 'ipd_model_scenarios', sprintf("%s_trace_plot.png", prefix)), p_trace, width = 9, height = 5, dpi = 150)
+    #ggsave(here::here('output', 'ipd_model_scenarios', sprintf("%s_trace_plot.png", prefix)), p_trace, width = 9, height = 5, dpi = 150)
   }
-
   
   #pairs plot
-  candidates <- c(estimated_par_name) #, "delta_F_13", "omega_F_13", "rr_V", "rr_N_pre", "rr_N_post", "delta_F_7", "omega_F_7", "rr_V", "rr_F"
-  sel <- intersect(candidates, dimnames(fit$draws())[[3]]) |> unique() |> head(5)
-  
-  if (length(sel) >= 2) {
-    p_pairs <- bayesplot::mcmc_pairs(fit$draws(), pars = sel, off_diag_args = list(size = 0.3, alpha = 0.4))
-    ggsave(here::here('output', 'ipd_model_scenarios', sprintf("%s_pairs_plot.png", prefix)), p_pairs, width = 8, height = 8, dpi = 150)
-  }
-
-  
+  post_pairs <- as_draws_df(fit$draws(estimated_par_name)) %>% dplyr::select(all_of(estimated_par_name))
+  rio::export(post_pairs, here::here('results', 'ipd_model_scenarios', sprintf("%s_pairs_plot.csv", prefix)))
+ 
   #prior vs posterior on the estimated parameter
   post_x <- as.numeric(posterior::as_draws_df(fit$draws(estimated_par_name))[[estimated_par_name]])
   
@@ -88,10 +80,10 @@ process_scenario <- function(scenario_id, estimated_par_name, prior_overlay) {
       scale_colour_manual(name = NULL, values = c(Prior = "black")) +
       labs(x = estimated_par_name, y = "density", title = sprintf("Scenario %d: prior vs posterior (%s)", scenario_id, estimated_par_name)) +
       theme_bw()
-    ggsave(here::here('output', 'ipd_model_scenarios', sprintf("%s_prior_post_plot.png", prefix)), p_dens, width = 7, height = 4, dpi = 150)
+    #ggsave(here::here('output', 'ipd_model_scenarios', sprintf("%s_prior_post_plot.png", prefix)), p_dens, width = 7, height = 4, dpi = 150)
   }
 
-  
+
   #CCR_2010 posterior
   # ccr_summary <- 
   #   .tidy_quantiles(fit$draws("ccr_2010", format = "draws_array")) %>%
@@ -243,7 +235,6 @@ process_scenario <- function(scenario_id, estimated_par_name, prior_overlay) {
 }
 
 
-
 #====================================================================
 
 #prior overlays for each scenario's estimated parameter
@@ -256,6 +247,51 @@ results <- list()
 results[["1"]] <- process_scenario(1, "delta_F_13", prior_overlays[["1"]])
 results[["2"]] <- process_scenario(2, "omega_F_13", prior_overlays[["2"]])
 results[["3"]] <- process_scenario(3, "rr_V",  prior_overlays[["3"]]) #rr_N_post
+
+
+#consolidated density plot
+density_ds <-
+  dplyr::bind_rows(
+  rio::import(here::here('results', 'ipd_model_scenarios', 'scenario1_pairs_plot.csv')) %>% dplyr::mutate(scenario = "Reduced direct PCV effectiveness") %>% dplyr::rename('value' = 'delta_F_13'),
+  rio::import(here::here('results', 'ipd_model_scenarios', 'scenario2_pairs_plot.csv')) %>% dplyr::mutate(scenario = "Reduced duration of PCV protection") %>% dplyr::rename('value' = 'omega_F_13'),
+  rio::import(here::here('results', 'ipd_model_scenarios', 'scenario3_pairs_plot.csv')) %>% dplyr::mutate(scenario = "Increased risk of N to co-colonisation") %>% dplyr::rename('value' = 'rr_V')) %>%
+  dplyr::mutate(scenario = factor(scenario, levels = c("Reduced direct PCV effectiveness", "Reduced duration of PCV protection", "Increased risk of N to co-colonisation")))
+
+A <- 
+  bayesplot::mcmc_trace(density_ds %>% dplyr::filter(scenario == 'Reduced direct PCV effectiveness') %>% dplyr::select(value)) + 
+  labs(x = 'Iterations', y = "Parameter value") +
+  theme(panel.border = element_rect(colour = "black", fill = NA, size = 1)) +
+  theme_bw(base_size = 14, base_family = "Lato") +
+  theme(legend.position = 'none')
+
+B <- 
+  bayesplot::mcmc_trace(density_ds %>% dplyr::filter(scenario == 'Reduced duration of PCV protection') %>% dplyr::select(value)) + 
+  labs(x = 'Iterations', y ="") +
+  theme(panel.border = element_rect(colour = "black", fill = NA, size = 1)) +
+  theme_bw(base_size = 14, base_family = "Lato") +
+  theme(legend.position = 'none')
+
+C <- 
+  bayesplot::mcmc_trace(density_ds %>% dplyr::filter(scenario == 'Increased risk of N to co-colonisation') %>% dplyr::select(value)) + 
+  labs(x = 'Iterations', y = "") +
+  theme(panel.border = element_rect(colour = "black", fill = NA, size = 1)) +
+  theme_bw(base_size = 14, base_family = "Lato") +
+  theme(legend.position = 'none')
+
+D <- 
+  density_ds %>%
+  ggplot(aes(x = value)) +
+  geom_histogram() +
+  facet_wrap(. ~ scenario, scales = 'free') +
+  labs(x = 'Parameter value', y = "Density") +
+  theme_bw(base_size = 14, base_family = "Lato") +
+  theme(panel.grid.minor  = element_blank(), strip.background  = element_rect(fill = "grey92")) +
+  theme(panel.border = element_rect(colour = "black", fill = NA, size = 1))  +
+  theme(strip.text.x = element_text(size = 16), strip.text.y = element_text(size = 16), strip.background = element_rect(fill = "gray90")) +
+  theme(legend.position = 'right') +
+  theme(axis.text.x = element_text(size = 14, angle = 0, hjust = 0.5), axis.text.y = element_text(size = 14))
+
+(A|B|C) /D
 
 
 #consolidated IPD plot
@@ -273,9 +309,6 @@ dplyr::bind_rows(
   geom_vline(xintercept = c(1999.5, 2009.5), linetype = "dotted", colour = "grey50", size = 1) +
   scale_shape_manual(values = c("pre-PCV13 (informational)" = 1, "PCV13 fit (2010-2019)" = 16)) +
   facet_wrap(scenario ~ factor(age, levels=c('<1y', '1-4y', '5-17y', '18+y')), scales = 'free') +
-  
-  #facet_grid(scenario ~ factor(age, levels=c('<1y', '1-4y', '5-17y', '18+y')), scales = 'free') + # + factor(serotype, levels=c('F','V','N'))
-  #labs(title = sprintf("Scenario %d: observed vs posterior-predicted IPD", scenario_id), subtitle = "Likelihood is over 2010-2019 only") +
   labs(x = 'Year', y = "IPD cases") +
   scale_x_continuous(limits = c(1999, 2019), breaks = seq(1999, 2019, by = 4)) +
   theme_bw(base_size = 14, base_family = "Lato") +
@@ -349,8 +382,10 @@ if (has_loo && all(fits_present)) {
     lppd     = lppd_vec,
     dlppd    = lppd_vec - max(lppd_vec)   #0 for the best-fitting scenario, negative for the others
   )
-  cat("\n--- Log pointwise predictive density (lppd) ---\n")
+  
+  cat("\nlog pointwise predictive density (lppd)\n")
   print(lppd_df, row.names = FALSE)
+  
 } else {
   message("\nskip WAIC comparison, `loo` is needed to run all 3 scenarios")
 }

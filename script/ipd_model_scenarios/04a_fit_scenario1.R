@@ -24,7 +24,7 @@ pacman::p_load(
 #omega_F_13 := omega_F_7 (propagated uncertainty, sampled from ipd_fit.rds posterior of log_omega_F_7)
 #rr_N_13 := rr_N_7 (propagated uncertainty, sampled from carriage_fit.rds posterior of log_rr_N)
 
-#source(here::here("script", "ipd_model", "04_fit_pcv13_common.R"))
+#source(here::here("script", "ipd_model_scenarios", "04_fit_pcv13_common.R"))
 source(here::here("04_fit_pcv13_common.R"))
 
 stan_data <- c(common_stan_data, list(

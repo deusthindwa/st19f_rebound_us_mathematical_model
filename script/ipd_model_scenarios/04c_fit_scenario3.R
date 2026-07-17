@@ -26,7 +26,7 @@ pacman::p_load(
 #the Stan parameter name `log_rr_N_post` is basically rr_N_13
 #rr_N_pre = rr_N_7 is propagated from carriage_fit's posterior of log_rr_N for the pre-PCV13 era 1999-2009
 
-#source(here::here("script", "ipd_model", "04_fit_pcv13_common.R"))
+#source(here::here("script", "ipd_model_scenarios", "04_fit_pcv13_common.R"))
 source(here::here("04_fit_pcv13_common.R"))
 
 stan_data <- c(common_stan_data, list(
