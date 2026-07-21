@@ -211,10 +211,10 @@ common_stan_data <- list(
 mcmc_args <- switch(
   MCMC_MODE,
   "quick" = list(
-    iter_warmup = 500, 
+    iter_warmup = 400, 
     iter_sampling = 500,
-    chains = 4, 
-    parallel_chains = 4,
+    chains = 2, 
+    parallel_chains = 2,
     adapt_delta = 0.9, 
     max_treedepth = 12),
   
@@ -230,5 +230,5 @@ mcmc_args <- switch(
 
 get_pcv13_model <- function() {
   #cmdstanr::cmdstan_model(here::here("script", "ipd_model_sensitivity", "03_pneumo_pcv13.stan"))
-  cmdstanr::cmdstan_model(here::here("03_pneumo_pcv13.stan"))
+  cmdstanr::cmdstan_model(here::here("03_pneumo_pcv13.stan"), force_recompile = TRUE)
 }
