@@ -17,13 +17,6 @@ ALL_YEARS   <- 1999:2019 #21 years
 N_BURN      <- 20 #in-Stan burn-in
 N_FIT_START <- 12 #year index of 2010
 
-#quantile width for the log-uniform "propagation prior" on pre-PCV13 parameter. 
-#the Stan model gives each propagated parameter the prior log_x ~ Uniform( quantile(log_x_post, LO), quantile(log_x_post, HI) )
-CARR_PRIOR_LO_PCTILE <- 0.005
-CARR_PRIOR_HI_PCTILE <- 0.995
-IPD_PRIOR_LO_PCTILE  <- 0.005
-IPD_PRIOR_HI_PCTILE  <- 0.995
-
 #per-boundary vaccination coverage.
 #1999 -> 2000 : 43 %  (2000 birth cohort)
 #2000 -> 2001 : 98 %  (2001 birth cohorts) etc
@@ -92,32 +85,72 @@ ipd_fit <- readRDS("ipd_fit.rds")
   as.matrix(arr)
 }
 
-#marginal log-scale quantile bounds for a vector of draws.
-#Returns c(lb, ub); also enforces lb < ub (small jitter if degenerate).
-.q_bounds <- function(x, lo, hi) {
-  #stopifnot(length(x) >= 2L, lo >= 0, hi <= 1, lo < hi)
-  b <- if (lo == 0 && hi == 1) c(min(x), max(x))
-       else as.numeric(quantile(x, probs = c(lo, hi), na.rm = TRUE))
-  if (diff(b) <= 0) b[2] <- b[1] + 1e-6
-  b
+
+#joint-posterior MVN propagation
+#replace the previous eight independent log-uniform (marginal-quantile) priors with two multivariate-normal priors on the log scale. This
+# preserves every pairwise correlation from the source posteriors
+#carriage_fit -> log_carr = [log_q_age(1..n_age), log_rr_V, log_rr_F, log_rr_N_pre]
+#ipd_fit -> log_ipd  = [log_delta_V_7, log_delta_F_7, log_omega_V_7, log_omega_F_7]
+#carriage_fit stores eps_V/F/N on the natural scale, so we log-transform to align with Stan parameter names (log_rr_V/F/N_pre).
+#ipd_fit already stores log_delta_V/F and log_omega_V/F on the log scale.
+
+#carriage_fit joint posterior on log scale
+carr_log_draws <- cbind(
+  as.matrix(carriage_fit$draws("log_rho_age", format = "draws_matrix")),   # n_draws x n_age
+  log(as.matrix(carriage_fit$draws("eps_V",   format = "draws_matrix"))),
+  log(as.matrix(carriage_fit$draws("eps_F",   format = "draws_matrix"))),
+  log(as.matrix(carriage_fit$draws("eps_N",   format = "draws_matrix")))
+)
+stopifnot(ncol(carr_log_draws) == fixed_data$n_age + 3L)
+carr_mean <- as.numeric(colMeans(carr_log_draws))
+carr_cov  <- cov(carr_log_draws)
+carr_L    <- t(chol(carr_cov))                     # lower-triangular Cholesky
+
+#ipd_fit joint posterior on log scale
+ipd_log_draws <- cbind(
+  as.matrix(ipd_fit$draws("log_delta_V",  format = "draws_matrix")),
+  as.matrix(ipd_fit$draws("log_delta_F",  format = "draws_matrix")),
+  as.matrix(ipd_fit$draws("log_omega_V",  format = "draws_matrix")),
+  as.matrix(ipd_fit$draws("log_omega_F",  format = "draws_matrix"))
+)
+stopifnot(ncol(ipd_log_draws) == 4L)
+ipd_mean <- as.numeric(colMeans(ipd_log_draws))
+ipd_cov  <- cov(ipd_log_draws)
+ipd_L    <- t(chol(ipd_cov))
+
+#safety bounds at +-10 SD (per element)
+#HMC leapfrog moves during early warmup pushes unconstrained log_carr / log_ipd far past reasonable values, causing exp() to overflow in the ODE call
+#bounds at +-10 marginal SDs are ~15 orders of magnitude past the MVN prior mass but prevent overflow.
+carr_sd <- sqrt(diag(carr_cov))
+carr_lb <- carr_mean - 10 * carr_sd
+carr_ub <- carr_mean + 10 * carr_sd
+ipd_sd  <- sqrt(diag(ipd_cov))
+ipd_lb  <- ipd_mean - 10 * ipd_sd
+ipd_ub  <- ipd_mean + 10 * ipd_sd
+
+#chain initialisation
+#start log_carr and log_ipd at their MVN means (with tiny jitter to differentiate chains for R-hat). The scenario-active PCV13 parameter starts
+#at `active_log_init` (log-mean of the informative Beta / Gamma prior); the two inactive PCV13 parameters start at the pre-PCV13 counterpart mean.
+make_init_fun <- function(scenario, active_log_init, jitter_sd = 0.005) {
+  # helpers to jitter and clip vectors/scalars safely inside declared bounds
+  jit_v <- function(x) x + rnorm(length(x), 0, jitter_sd)
+  clip_safe <- function(x, lb, ub, margin = 1e-3) {
+    pmin(pmax(x, lb + margin), ub - margin)
+  }
+  function(chain_id) {
+    # inactive-PCV13 defaults (natural log-scale means from the source fits)
+    lF13 <- if (scenario == 1L) active_log_init else ipd_mean[2]                    # log_delta_F_7
+    lO13 <- if (scenario == 2L) active_log_init else ipd_mean[4]                    # log_omega_F_7
+    lRP  <- if (scenario == 3L) active_log_init else carr_mean[fixed_data$n_age + 3L]  # log_rr_N_pre
+    list(
+      log_carr       = jit_v(carr_mean),
+      log_ipd        = jit_v(ipd_mean),
+      log_delta_F_13 = clip_safe(jit_v(lF13), log(0.01), log(0.99)),
+      log_omega_F_13 = clip_safe(jit_v(lO13), log(0.01), log(5.00)),
+      log_rr_N_post  = clip_safe(jit_v(lRP),  log(0.01), log(0.99))
+    )
+  }
 }
-
-#marginal log-scale quantile bounds from carriage_fit posterior
-.log_q_age_post <- .draws_mat(carriage_fit, "log_rho_age")  #n_draws x n_age
-stopifnot(ncol(.log_q_age_post) == fixed_data$n_age)
-log_q_age_bnds <- apply(.log_q_age_post, 2, .q_bounds, lo = CARR_PRIOR_LO_PCTILE, hi = CARR_PRIOR_HI_PCTILE)  #2 x n_age
-log_q_age_lb <- as.numeric(log_q_age_bnds[1, ])
-log_q_age_ub <- as.numeric(log_q_age_bnds[2, ])
-
-log_rr_V_bnds <- log(.q_bounds(as.vector(.draws_mat(carriage_fit, "eps_V")), CARR_PRIOR_LO_PCTILE, CARR_PRIOR_HI_PCTILE))
-log_rr_F_bnds <- log(.q_bounds(as.vector(.draws_mat(carriage_fit, "eps_F")), CARR_PRIOR_LO_PCTILE, CARR_PRIOR_HI_PCTILE))
-log_rr_N_pre_bnds <- log(.q_bounds(as.vector(.draws_mat(carriage_fit, "eps_N")), CARR_PRIOR_LO_PCTILE, CARR_PRIOR_HI_PCTILE))
-
-#marginal log-scale quantile bounds from ipd_fit posterior
-log_delta_V_7_bnds <- .q_bounds(as.vector(.draws_mat(ipd_fit, "log_delta_V")), IPD_PRIOR_LO_PCTILE, IPD_PRIOR_HI_PCTILE)
-log_delta_F_7_bnds <- .q_bounds(as.vector(.draws_mat(ipd_fit, "log_delta_F")), IPD_PRIOR_LO_PCTILE, IPD_PRIOR_HI_PCTILE)
-log_omega_V_7_bnds <- .q_bounds(as.vector(.draws_mat(ipd_fit, "log_omega_V")), IPD_PRIOR_LO_PCTILE, IPD_PRIOR_HI_PCTILE)
-log_omega_F_7_bnds <- .q_bounds(as.vector(.draws_mat(ipd_fit, "log_omega_F")), IPD_PRIOR_LO_PCTILE, IPD_PRIOR_HI_PCTILE)
 
 #R seed burn-in (still uses 1999 population + mean q/rr)
 #source(here::here("script", "ipd_model_scenarios", "02_pre_pcv_sim.R"))
@@ -189,39 +222,34 @@ common_stan_data <- list(
   seed_state       = seed_state,
   vacc_cov_pcv7_year  = VACC_COV_PCV7_YEAR,
   vacc_cov_pcv13_year = VACC_COV_PCV13_YEAR,
-  log_q_age_lb      = log_q_age_lb, #marginal log-scale quantile bounds (carriage_fit)
-  log_q_age_ub      = log_q_age_ub,
-  log_rr_V_lb       = log_rr_V_bnds[1],
-  log_rr_V_ub       = log_rr_V_bnds[2],
-  log_rr_F_lb       = log_rr_F_bnds[1],
-  log_rr_F_ub       = log_rr_F_bnds[2],
-  log_rr_N_pre_lb   = log_rr_N_pre_bnds[1],
-  log_rr_N_pre_ub   = log_rr_N_pre_bnds[2],
-  log_delta_V_7_lb  = log_delta_V_7_bnds[1], #marginal log-scale quantile bounds (ipd_fit)
-  log_delta_V_7_ub  = log_delta_V_7_bnds[2],
-  log_delta_F_7_lb  = log_delta_F_7_bnds[1],
-  log_delta_F_7_ub  = log_delta_F_7_bnds[2],
-  log_omega_V_7_lb  = log_omega_V_7_bnds[1],
-  log_omega_V_7_ub  = log_omega_V_7_bnds[2],
-  log_omega_F_7_lb  = log_omega_F_7_bnds[1],
-  log_omega_F_7_ub  = log_omega_F_7_bnds[2],
-  obs_ipd           = ipd_int
+
+  # Joint-posterior MVN inputs + per-element safety bounds
+  carr_mean = carr_mean,
+  carr_L    = carr_L,
+  carr_lb   = carr_lb,
+  carr_ub   = carr_ub,
+  ipd_mean  = ipd_mean,
+  ipd_L     = ipd_L,
+  ipd_lb    = ipd_lb,
+  ipd_ub    = ipd_ub,
+
+  obs_ipd = ipd_int
 )
 
 mcmc_args <- switch(
   MCMC_MODE,
   "quick" = list(
-    iter_warmup = 400, 
-    iter_sampling = 500,
-    chains = 2, 
-    parallel_chains = 2,
-    adapt_delta = 0.9, 
+    iter_warmup = 500,
+    iter_sampling = 200,
+    chains = 4,
+    parallel_chains = 4,
+    adapt_delta = 0.9,
     max_treedepth = 12),
-  
+
   "production" = list(
-    iter_warmup = 1000, 
+    iter_warmup = 1000,
     iter_sampling = 4000,
-    chains = 4, 
+    chains = 4,
     parallel_chains = 4,
     adapt_delta = 0.95,
     max_treedepth = 13),
@@ -230,5 +258,5 @@ mcmc_args <- switch(
 
 get_pcv13_model <- function() {
   #cmdstanr::cmdstan_model(here::here("script", "ipd_model_scenarios", "03_pneumo_pcv13.stan"))
-  cmdstanr::cmdstan_model(here::here("03_pneumo_pcv13.stan"), force_recompile = TRUE)
+  cmdstanr::cmdstan_model(here::here("03_pneumo_pcv13.stan")) #force_recompile = TRUE
 }

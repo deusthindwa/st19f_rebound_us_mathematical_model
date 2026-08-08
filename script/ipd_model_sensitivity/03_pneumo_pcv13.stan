@@ -4,15 +4,20 @@
 
 // =============================================================================
 
-// PCV7 -> PCV13 model with posterior vector uncertainty propagation. This code serves all three PCV13 scenarios.
+// PCV7 -> PCV13 model with JOINT-POSTERIOR (multivariate-normal) propagation.
+// This code serves all three PCV13 scenarios.
 //
 //   - Initial 1999 population from `init_1999_fitted` (demographic_model.rds).
 //   - year-boundary update applies explicit births and per-age mortality as pre-pcv13
-//   - propagated parameters (q_age, rr_V, rr_F, rr_N_pre, delta_V_7, delta_F_7, omega_V_7, omega_F_7) are given independent-uniform priors with bounds from marginal quantiles
-//      carriage_fit -> log_q_age, log_rr_V, log_rr_F, log_rr_N_pre
-//      ipd_fit -> log_delta_V_7, log_delta_F_7, log_omega_V_7, log_omega_F_7
+//   - propagated parameters are drawn from two MULTIVARIATE-NORMAL priors on the log scale,
+//     with mean vector and Cholesky-factored covariance matrix computed in
+//     04_fit_pcv13_common.R from the JOINT posteriors of the source fits:
+//        carriage_fit -> log_carr = [log_q_age(1..n_age), log_rr_V, log_rr_F, log_rr_N_pre]
+//        ipd_fit      -> log_ipd  = [log_delta_V_7, log_delta_F_7, log_omega_V_7, log_omega_F_7]
+//     Using multi_normal_cholesky preserves ALL pairwise correlations from the
+//     source posteriors (under a Gaussian assumption on log scale).
 //   - delta_V_13 = delta_V_7 and omega_V_13 = omega_V_7
-//   - rr_N is period-specific: rr_N_pre (from carriage_fit posterior) drives 1999-2009 dynamics
+//   - rr_N is period-specific: rr_N_pre drives 1999-2009 dynamics
 //   - rr_N_post drives 2010-2019 dynamics. rr_N_post is estimated in scenario 3, prior Beta(7, 2), for scenarios 1 and 2 it is sampled the same way as rr_N_pre.
 //   - scenario-specific informative priors (Beta / Gamma) with Jacobian:
 //        scenario 1: delta_F_13 ~ Beta(3, 9)
@@ -247,19 +252,22 @@ data {
   vector<lower=0, upper=1>[n_year] vacc_cov_pcv7_year;
   vector<lower=0, upper=1>[n_year] vacc_cov_pcv13_year;
 
-  // log-scale marginal-quantile bounds for the propagated parameters.
-  // these are computed in 04_fit_pcv13_common.R
-  // inside Stan each propagated parameter is declared <lower=..._lb, upper=..._ub> and the model block adds no explicit prior on it
-  vector[n_age]              log_q_age_lb;       vector[n_age] log_q_age_ub;
-  real                       log_rr_V_lb;        real          log_rr_V_ub;
-  real                       log_rr_F_lb;        real          log_rr_F_ub;
-  real                       log_rr_N_pre_lb;    real          log_rr_N_pre_ub;
-  real                       log_delta_V_7_lb;   real          log_delta_V_7_ub;
-  real                       log_delta_F_7_lb;   real          log_delta_F_7_ub;
-  real                       log_omega_V_7_lb;   real          log_omega_V_7_ub;
-  real                       log_omega_F_7_lb;   real          log_omega_F_7_ub;
+  // joint-posterior MVN propagation on log scale
+  // log_carr = [log_q_age(1..n_age), log_rr_V, log_rr_F, log_rr_N_pre]
+  // log_ipd = [log_delta_V_7, log_delta_F_7, log_omega_V_7, log_omega_F_7]
+  // carr_L and ipd_L are lower-triangular Cholesky factors of each posterior covariance matrix, so multi_normal_cholesky(mean, L) samples log_x with
+  // exact posterior mean, marginal SD and pairwise correlations. carr_lb/ub and ipd_lb/ub are per-element safety bounds at +-10 marginal
+  // SDs -- statistically transparent under the MVN prior but they prevent exp() overflow in the ODE call during aggressive warmup leapfrogs.
+  vector[n_age + 3]                   carr_mean;
+  matrix[n_age + 3, n_age + 3]        carr_L;
+  vector[n_age + 3]                   carr_lb;
+  vector[n_age + 3]                   carr_ub;
+  vector[4]                           ipd_mean;
+  matrix[4, 4]                        ipd_L;
+  vector[4]                           ipd_lb;
+  vector[4]                           ipd_ub;
 
-  // safety bounds for the (log-scale) estimated parameters
+  // safety bounds for the (log-scale) estimated PCV13 parameters
   real                       log_delta_F_13_lb;
   real                       log_delta_F_13_ub;
   real                       log_omega_F_13_lb;
@@ -277,25 +285,22 @@ transformed data {
   real t0       = 0.0;
   array[1] real ts = {1.0};
 
-  real ode_rel_tol      = 1e-3; //changed this from 1e-3 to help spped up sampling on Yale's hpc
-  real ode_abs_tol      = 1e-3; //changed this from 1e-3 to help spped up sampling on Yale's hpc
+  real ode_rel_tol      = 1e-3;
+  real ode_abs_tol      = 1e-3;
   int  ode_max_num_steps = 10000;
 }
 
 // =============================================================================
 
 parameters {
-  // propagated parameters, declared directly on the log scale with bounds
-  vector<lower=log_q_age_lb, upper=log_q_age_ub>[n_age] log_q_age;
-  real<lower=log_rr_V_lb,       upper=log_rr_V_ub>       log_rr_V;
-  real<lower=log_rr_F_lb,       upper=log_rr_F_ub>       log_rr_F;
-  real<lower=log_rr_N_pre_lb,   upper=log_rr_N_pre_ub>   log_rr_N_pre;
-  real<lower=log_delta_V_7_lb,  upper=log_delta_V_7_ub>  log_delta_V_7;
-  real<lower=log_delta_F_7_lb,  upper=log_delta_F_7_ub>  log_delta_F_7;
-  real<lower=log_omega_V_7_lb,  upper=log_omega_V_7_ub>  log_omega_V_7;
-  real<lower=log_omega_F_7_lb,  upper=log_omega_F_7_ub>  log_omega_F_7;
+  // Joint-posterior propagated parameters with +-10 SD safety bounds
+  // (bounds are per-element; MVN priors below give the actual shape).
+  vector<lower=carr_lb, upper=carr_ub>[n_age + 3] log_carr;   // [log_q_age(1..n_age), log_rr_V, log_rr_F, log_rr_N_pre]
+  vector<lower=ipd_lb,  upper=ipd_ub>[4]          log_ipd;    // [log_delta_V_7, log_delta_F_7, log_omega_V_7, log_omega_F_7]
 
-  // estimated parameters on log scale (all three declared; only the scenario's relevant one has an informative prior in the model block).
+  // Estimated PCV13 parameters (unchanged from previous version).
+  // All three declared so the same binary serves all scenarios; only the
+  // active one gets an informative prior in the model block.
   real<lower=log_delta_F_13_lb, upper=log_delta_F_13_ub> log_delta_F_13;
   real<lower=log_omega_F_13_lb, upper=log_omega_F_13_ub> log_omega_F_13;
   real<lower=log_rr_N_post_lb,  upper=log_rr_N_post_ub>  log_rr_N_post;
@@ -304,11 +309,21 @@ parameters {
 // =============================================================================
 
 transformed parameters {
+  // ---- Slice MVN vectors into the previously-named log-scale scalars ------
+  vector[n_age] log_q_age    = head(log_carr, n_age);
+  real          log_rr_V     = log_carr[n_age + 1];
+  real          log_rr_F     = log_carr[n_age + 2];
+  real          log_rr_N_pre = log_carr[n_age + 3];
+  real          log_delta_V_7  = log_ipd[1];
+  real          log_delta_F_7  = log_ipd[2];
+  real          log_omega_V_7  = log_ipd[3];
+  real          log_omega_F_7  = log_ipd[4];
+
   // PCV13 V efficacy / waning identical to PCV7
   real log_delta_V_13 = log_delta_V_7;
   real log_omega_V_13 = log_omega_V_7;
 
-  // Per-scenario, ONE PCV13 F parameter is estimated and the OTHER TWO are
+  // per-scenario, ONE PCV13 F parameter is estimated and the OTHER TWO are
   // set equal to their PCV7 counterparts:
   // scenario 1 estimates delta_F_13 ; omega_F_13_used = omega_F_7 ; rr_N_post_used  = rr_N_pre
   // scenario 2 estimates omega_F_13 ; delta_F_13_used = delta_F_7 ; rr_N_post_used  = rr_N_pre
@@ -322,17 +337,17 @@ transformed parameters {
   real rr_V              = exp(log_rr_V);
   real rr_F              = exp(log_rr_F);
   real rr_N_pre          = exp(log_rr_N_pre);
-  
+
   // "raw estimated" natural-scale (only meaningful for the scenario where it is active; exposed so the informative-prior statement can attach to it)
   real rr_N_post         = exp(log_rr_N_post);
   real delta_F_13        = exp(log_delta_F_13);
   real omega_F_13        = exp(log_omega_F_13);
-  
+
   // "used" natural-scale
   real delta_F_13_used   = exp(log_delta_F_13_used);
   real omega_F_13_used   = exp(log_omega_F_13_used);
   real rr_N_post_used    = exp(log_rr_N_post_used);
-  
+
   // other natural-scale exports
   real delta_V_7         = exp(log_delta_V_7);
   real delta_F_7         = exp(log_delta_F_7);
@@ -373,7 +388,7 @@ transformed parameters {
   // main fit loop: 1999..2019
   for (t in 1:n_year) {
     year_start_state[t] = cur;
-    
+
     // period-specific rr_N: pre-PCV13 uses the propagated rr_N_pre
     // post-PCV13 uses rr_N_post_used (= rr_N_post if scenario 3, else rr_N_pre)
     real rr_N_t = (t <= 11) ? rr_N_pre : rr_N_post_used;
@@ -402,7 +417,7 @@ transformed parameters {
         }
       }
     }
-    
+
     // CCR_2010 = obs_2010 / inc_2009 (serotype-reshuffle for PCV13 era)
     if (t == 11) {
       for (a in 1:n_age) {
@@ -433,10 +448,13 @@ transformed parameters {
 // =============================================================================
 
 model {
-  // propagated log-scale parameters get NO explicit prior, <lower=lb, upper=ub> bounds in parameters block give them implicit uniform priors on log scale (= log-uniform on natural)
-  // the scenario's ACTIVE estimated parameter gets an informative prior on the natural scale; the Jacobian for the exp() transformation is added
-  // the other two log_*_13 / log_rr_N_post parameters are still declared (so the same Stan binary can serve all three scenarios) but do not affect the dynamics in their non-active scenario
-  // transformed parameters wires the *_used variables to the PCV7 propagated values instead. Their inactive posteriors equal implicit log-uniform prior within the safety bounds
+  // joint MVN propagation priors, these preserve every pairwise correlation from the source posteriors
+  log_carr ~ multi_normal_cholesky(carr_mean, carr_L);
+  log_ipd  ~ multi_normal_cholesky(ipd_mean,  ipd_L);
+
+  // scenario-specific informative prior on the active PCV13 parameter prior is on the NATURAL scale; the Jacobian for exp() is added.
+  // the other two log_*_13 / log_rr_N_post parameters are still declared so the same Stan binary can serve all three scenarios) but do not
+  // affect the dynamics in their non-active scenario, the *_used variables in transformed parameters wire to the PCV7 propagated values
   if (scenario == 1) {
     delta_F_13 ~ beta(3, 9);
     target += log_delta_F_13;

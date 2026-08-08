@@ -94,7 +94,7 @@ pop_matrix <- as.matrix(us_pop[, -1])  # rows = year, cols = age group
 rownames(pop_matrix) <- us_pop$year
 pop_matrix2 <- pop_matrix
 
-#observed IPD case counts 1999..2019 (The cases are updated so tha serotype 3 is part of non-vaccine serotypes)
+#observed IPD case counts 1999..2019 (The cases are updated so that serotype 3 is part of non-vaccine serotypes)
 obs_ipd <- tibble::tribble(
   ~year, ~V_1, ~V_2, ~V_3, ~V_4, ~F_1, ~F_2, ~F_3, ~F_4, ~N_1, ~N_2, ~N_3, ~N_4,
   1999,   597,  163,   61, 1510,   82,   24,    6,  107,   91,   28,   49, 1066,

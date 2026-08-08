@@ -301,13 +301,14 @@ dplyr::bind_rows(
   rio::import(here::here('results', 'ipd_model_scenarios', 'scenario3_obs_pred_plot.csv')) %>% dplyr::mutate(scenario = "Increased risk of N to co-colonisation")) %>%
   dplyr::mutate(scenario = factor(scenario, levels = c("Reduced direct PCV effectiveness", "Reduced duration of PCV protection", "Increased risk of N to co-colonisation"))) %>%
   dplyr::filter(serotype =='F') %>%
+  #dplyr::filter(scenario == "Reduced direct PCV effectiveness") %>%
   
   ggplot(aes(x = year)) +
   geom_ribbon(aes(ymin = `2.5%`, ymax = `97.5%`, fill = serotype, group = period), alpha = 0.25) +
   geom_line(aes(y = `50%`, colour = serotype, group = period, linetype = period), size = 1.5) +
   geom_point(aes(y = obs, shape = period), size = 2.5, stroke = 1.5) +
   geom_vline(xintercept = c(1999.5, 2009.5), linetype = "dotted", colour = "grey50", size = 1) +
-  scale_shape_manual(values = c("pre-PCV13 (informational)" = 1, "PCV13 fit (2010-2019)" = 16)) +
+  scale_shape_manual(values = c("pre-PCV13 (propagation)" = 1, "PCV13 fit (2010-2019)" = 16)) +
   facet_wrap(scenario ~ factor(age, levels=c('<1y', '1-4y', '5-17y', '18+y')), scales = 'free') +
   labs(x = 'Year', y = "IPD cases") +
   scale_x_continuous(limits = c(1999, 2019), breaks = seq(1999, 2019, by = 4)) +
