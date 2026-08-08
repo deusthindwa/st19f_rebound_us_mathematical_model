@@ -85,7 +85,7 @@
    - Outputs a state vector that is already close to pre-PCV steady state
    - Stan re-equilibrates this state for each MCMC draw via its own short burn-in
 4. (`03_pneumo_pcv.stan`) **Stan model**
-   - **Independent log-uniform priors on `q_age` and `rr_V/F/N`, no cross-parameter correlation is imposed (computational)
+   - **MVN priors on `q_age` and `rr_V/F/N`, includes cross-parameter correlation imposed
    - **Prior-CrI parameter bounds on δ/ω** formed in `transformed data` and used in the `parameters` block declarations
    - The prior shape (Beta(13, 7) on δ, Gamma(2, 8) on ω) applied in the model block with the exp() Jacobian
    - **Explicit demographic year-boundary update** (`age_demog_step`). 12 monthly Euler substeps integrate linear demog ODE for 1yr
@@ -128,22 +128,22 @@ All sampled parameters live on the **log scale** in Stan parameters block
 
 | Symbol | Name (natural) | Sampled as | Natural-scale | Role |
 |---|---|---|---|---|
-| δ_V,7 | `delta_V` | `log_delta_V` | (0.806, 0.875) | Uncertainty propagation, log-uniform |
-| δ_F,7 | `delta_F` | `log_delta_F` | (0.709, 0.791) | Uncertainty propagation, log-uniform |
-| ω_V,7 | `omega_V` | `log_omega_V` | (0.244, 0.330) | Uncertainty propagation, log-uniform |
-| ω_F,7 | `omega_F` | `log_omega_F` | (0.092, 0.958) | Uncertainty propagation, log-uniform |
-| q_age[1] | `q_age[1]` | `log_q_age[1]` | (0.0125, 0.0174) | Uncertainty propagation, log-uniform |
-| q_age[2] | `q_age[2]` | `log_q_age[2]` | (0.0150, 0.0185) | Uncertainty propagation, log-uniform |
-| q_age[3] | `q_age[3]` | `log_q_age[3]` | (0.00864, 0.0108) | Uncertainty propagation, log-uniform |
-| q_age[4] | `q_age[4]` | `log_q_age[4]` | (0.00517, 0.00635) | Uncertainty propagation, log-uniform |
-| rr_V | `rr_V` | `log_rr_V` | (0.0712, 0.198) | Uncertainty propagation, log-uniform |
-| rr_F | `rr_F` | `log_rr_F` | (0.352, 0.952)  | Uncertainty propagation, log-uniform |
-| rr_N | `rr_N` | `log_rr_N` | (0.178, 0.524)  | Uncertainty propagation, log-uniform |
+| δ_V,7 | `delta_V` | `log_delta_V` | (0.806, 0.875) | Uncertainty propagation, MVN |
+| δ_F,7 | `delta_F` | `log_delta_F` | (0.709, 0.791) | Uncertainty propagation, MVN |
+| ω_V,7 | `omega_V` | `log_omega_V` | (0.244, 0.330) | Uncertainty propagation, MVN |
+| ω_F,7 | `omega_F` | `log_omega_F` | (0.092, 0.958) | Uncertainty propagation, MVN |
+| q_age[1] | `q_age[1]` | `log_q_age[1]` | (0.0125, 0.0174) | Uncertainty propagation, MVN |
+| q_age[2] | `q_age[2]` | `log_q_age[2]` | (0.0150, 0.0185) | Uncertainty propagation, MVN |
+| q_age[3] | `q_age[3]` | `log_q_age[3]` | (0.00864, 0.0108) | Uncertainty propagation, MVN |
+| q_age[4] | `q_age[4]` | `log_q_age[4]` | (0.00517, 0.00635) | Uncertainty propagation, MVN |
+| rr_V | `rr_V` | `log_rr_V` | (0.0712, 0.198) | Uncertainty propagation, MVN |
+| rr_F | `rr_F` | `log_rr_F` | (0.352, 0.952)  | Uncertainty propagation, MVN |
+| rr_N | `rr_N` | `log_rr_N` | (0.178, 0.524)  | Uncertainty propagation, MVN |
 
 - The 4 PCV7 parameters are *uncertainty propagation* 
 - The 4 `q_age` parameters are are *uncertainty propagation*
 - The 3 `rr_*` parameters are *uncertainty-propagation*
-- Sampled on the log scale from log-uniform priors per MCMC iteration
+- Sampled on the log scale from joint-posterior MVN for priors per MCMC iteration
 - Posterior of eatimated PCV13 parms will reflect uncertainty in age susceptibility, in co-colonisation risks & vaccine effects. 
 - `rr_V7`, `rr_F7`, `rr_N7` in the PCV7-vaccinated population share the same parameter as their unvaccinated counterparts
 
